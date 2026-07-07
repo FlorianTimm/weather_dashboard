@@ -24,7 +24,7 @@ type AppScaleOptions = {
 const defaultSeries: SeriesId[] = ["temp", "rain_rate", "dew_out", "solar_meas"];
 
 const chartPresets: Record<PresetId, SeriesId[]> = {
-    klima: ["temp", "temp_in", "wind", "rain_rate", "traffic"],
+    klima: ["temp", "rain_rate", "dew_out", "solar_meas"],
     feuchte: ["dew_in", "dew_out", "hum_in"],
     solar: ["solar_theo", "solar_meas", "cloudiness"],
 };
@@ -42,7 +42,12 @@ const chartSeries: Record<SeriesId, LineDataset> = {
         fill: true,
         tension: 0.15,
     }),
-    traffic: createLineSeries("Autobahn-Verkehrsfluss (%)", "traffic", "#2ecc71", "percent", {
+    traffic_flow: createLineSeries("Autobahn-Verkehrsfluss (%)", "traffic_flow", "#2ecc71", "percent", {
+        borderWidth: 1.5,
+        borderDash: [2, 2],
+        tension: 0.2,
+    }),
+    traffic_noise: createLineSeries("Verkehrslautstärke (%)", "traffic_noise", "#e74c3c", "percent", {
         borderWidth: 1.5,
         borderDash: [2, 2],
         tension: 0.2,
@@ -93,6 +98,8 @@ export class WeatherChart {
                 `api.php?action=chart&range=${this.currentRange}&date=${formatDateParam(this.selectedChartDate)}`,
             );
             this.cachedChartData = (await response.json()) as ChartPayload;
+            this.syncSeriesButtons();
+            this.syncPresetButtons();
             this.syncChartDateControls();
             this.renderChart();
             this.windRose.render(this.cachedChartData);
@@ -102,9 +109,8 @@ export class WeatherChart {
     }
 
     changeRange(range: RangeId, btn: HTMLElement): void {
-        document.querySelectorAll("#range-buttons .btn").forEach((button) => button.classList.remove("active"));
-        btn.classList.add("active");
         this.currentRange = range;
+        this.syncRangeButtons(btn);
         void this.loadChartData();
     }
 
@@ -121,9 +127,8 @@ export class WeatherChart {
     changeMode(mode: string, btn: HTMLElement): void {
         if (!this.isPresetId(mode)) return;
 
-        document.querySelectorAll("#mode-buttons .btn").forEach((button) => button.classList.remove("active"));
-        btn.classList.add("active");
         this.activeSeries = new Set(chartPresets[mode]);
+        this.syncPresetButtons();
         this.syncSeriesButtons();
         this.renderChart();
     }
@@ -135,7 +140,9 @@ export class WeatherChart {
             this.activeSeries.add(seriesId);
         }
 
-        btn.classList.toggle("active", this.activeSeries.has(seriesId));
+        const isActive = this.activeSeries.has(seriesId);
+        btn.classList.toggle("active", isActive);
+        btn.setAttribute("aria-pressed", String(isActive));
         this.syncPresetButtons();
         this.renderChart();
     }
@@ -272,7 +279,9 @@ export class WeatherChart {
 
     private syncSeriesButtons(): void {
         document.querySelectorAll<HTMLButtonElement>("#series-buttons .btn").forEach((btn) => {
-            btn.classList.toggle("active", this.activeSeries.has(btn.dataset.series as SeriesId));
+            const isActive = this.activeSeries.has(btn.dataset.series as SeriesId);
+            btn.classList.toggle("active", isActive);
+            btn.setAttribute("aria-pressed", String(isActive));
         });
     }
 
@@ -281,7 +290,17 @@ export class WeatherChart {
         document.querySelectorAll<HTMLButtonElement>("#mode-buttons .btn").forEach((btn) => {
             const mode = btn.dataset.mode;
             const preset = this.isPresetId(mode) ? chartPresets[mode].slice().sort().join("|") : "";
-            btn.classList.toggle("active", selected === preset);
+            const isActive = selected === preset;
+            btn.classList.toggle("active", isActive);
+            btn.setAttribute("aria-pressed", String(isActive));
+        });
+    }
+
+    private syncRangeButtons(clickedBtn?: HTMLElement): void {
+        document.querySelectorAll<HTMLButtonElement>("#range-buttons .btn").forEach((btn) => {
+            const isActive = clickedBtn ? btn === clickedBtn : btn.dataset.range === this.currentRange;
+            btn.classList.toggle("active", isActive);
+            btn.setAttribute("aria-pressed", String(isActive));
         });
     }
 

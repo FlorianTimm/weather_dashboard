@@ -31,20 +31,18 @@ document.addEventListener("DOMContentLoaded", () => {
 
 function registerUIHandlers(): void {
     // Range buttons
-    document.querySelectorAll('#range-buttons [data-range]').forEach((el) => {
+    document.querySelectorAll("#range-buttons [data-range]").forEach((el) => {
         const btn = el as HTMLElement;
-        btn.addEventListener('click', () => {
+        btn.addEventListener("click", () => {
             const range = btn.dataset.range as RangeId | undefined;
             if (range && window.changeRange) window.changeRange(range, btn);
-            document.querySelectorAll('#range-buttons .btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
         });
     });
 
     // Chart date navigation (shift)
-    document.querySelectorAll('[data-shift]').forEach((el) => {
+    document.querySelectorAll("[data-shift]").forEach((el) => {
         const btn = el as HTMLElement;
-        btn.addEventListener('click', () => {
+        btn.addEventListener("click", () => {
             const v = btn.dataset.shift;
             if (!v) return;
             const dir = Number(v);
@@ -53,31 +51,28 @@ function registerUIHandlers(): void {
     });
 
     // Reset (Heute)
-    document.querySelectorAll('[data-reset]').forEach((el) => {
+    document.querySelectorAll("[data-reset]").forEach((el) => {
         const btn = el as HTMLElement;
-        btn.addEventListener('click', () => {
+        btn.addEventListener("click", () => {
             if (window.resetChartDate) window.resetChartDate();
         });
     });
 
     // Mode buttons
-    document.querySelectorAll('#mode-buttons [data-mode]').forEach((el) => {
+    document.querySelectorAll("#mode-buttons [data-mode]").forEach((el) => {
         const btn = el as HTMLElement;
-        btn.addEventListener('click', () => {
+        btn.addEventListener("click", () => {
             const mode = btn.dataset.mode;
             if (mode && window.changeMode) window.changeMode(mode, btn);
-            document.querySelectorAll('#mode-buttons .preset-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
         });
     });
 
     // Series toggle buttons
-    document.querySelectorAll('#series-buttons [data-series]').forEach((el) => {
+    document.querySelectorAll("#series-buttons [data-series]").forEach((el) => {
         const btn = el as HTMLElement;
-        btn.addEventListener('click', () => {
+        btn.addEventListener("click", () => {
             const series = btn.dataset.series as SeriesId | undefined;
             if (series && window.toggleSeries) window.toggleSeries(series, btn);
-            btn.classList.toggle('active');
         });
     });
 }

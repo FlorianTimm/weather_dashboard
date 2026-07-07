@@ -26,7 +26,7 @@ export class LiveDashboard {
                 data.calculated.laerm_index,
                 data.current.t1wdir,
                 data.calculated.wind_speed_kmh,
-                data.calculated.traffic_flow,
+                data.calculated.traffic_noise,
                 data.calculated.schall_leitung,
             );
             this.renderDrone(data.current.t1wgust, data.current.t1ws10mav);
@@ -118,7 +118,7 @@ export class LiveDashboard {
         setStyle("live-kwl-trend", "color", afout < afin ? "#2ecc71" : "#e67e22");
     }
 
-    private renderNoise(index: Numberish, wdir: Numberish, speed: Numberish, trafficFlow: Numberish, schallLeitung: Numberish): void {
+    private renderNoise(index: Numberish, wdir: Numberish, speed: Numberish, trafficNoise: Numberish, schallLeitung: Numberish): void {
         const noiseIndex = Number(index);
         let status = "Norddeutsche Gelassenheit";
         let desc = "Kaum merkliches Rauschen der Autobahnen.";
@@ -140,7 +140,7 @@ export class LiveDashboard {
         setHtml("noise-text", `🔊 <strong>${status}</strong> — ${desc}`);
         setHtml("noise-factors", `
             <strong>Analysedaten:</strong> 
-            Verkehrsfluss-Koeffizient: <strong>${trafficFlow}%</strong> (Höher = Freier/Lauter) | 
+            Verkehrslautstärke-Koeffizient: <strong>${trafficNoise}%</strong> (Höher = Freier/Lauter) | 
             Schall-Ausbreitung: <strong>${schallLeitung}%</strong> (Wind-Vektor bei ${wdir}° / ${speed} km/h)
         `);
     }

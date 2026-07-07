@@ -115,9 +115,9 @@
     <!-- DIAGRAMME -->
     <h2>📉 Analyse & Verlaufsdiagramme</h2>
     <div class="btn-group" id="range-buttons">
-        <button class="btn active" data-range="24h">24 Stunden</button>
-        <button class="btn" data-range="7d">7 Tage</button>
-        <button class="btn" data-range="30d">30 Tage</button>
+        <button class="btn active" data-range="24h" aria-pressed="true">24 Stunden</button>
+        <button class="btn" data-range="7d" aria-pressed="false">7 Tage</button>
+        <button class="btn" data-range="30d" aria-pressed="false">30 Tage</button>
     </div>
     <div class="chart-date-nav">
         <button class="btn" data-shift="-1">Zurück</button>
@@ -126,22 +126,23 @@
         <button class="btn" id="chart-next-btn" data-shift="1">Vor</button>
     </div>
     <div class="btn-group preset-group" id="mode-buttons">
-        <button class="btn preset-btn" data-mode="klima">Klima & Wind</button>
-        <button class="btn preset-btn" data-mode="feuchte">Feuchtigkeits-Trend</button>
-        <button class="btn preset-btn" data-mode="solar">☀️ Solar & Bewölkung</button>
+        <button class="btn preset-btn active" data-mode="klima" aria-pressed="true">Klima & Wind</button>
+        <button class="btn preset-btn" data-mode="feuchte" aria-pressed="false">Feuchtigkeits-Trend</button>
+        <button class="btn preset-btn" data-mode="solar" aria-pressed="false">☀️ Solar & Bewölkung</button>
     </div>
     <div class="btn-group series-group" id="series-buttons">
-        <button class="btn active" data-series="temp">Temperatur außen</button>
-        <button class="btn" data-series="temp_in">Temperatur innen</button>
-        <button class="btn" data-series="wind">Windböen</button>
-        <button class="btn active" data-series="rain_rate">Niederschlag</button>
-        <button class="btn" data-series="traffic">Verkehr</button>
-        <button class="btn" data-series="dew_in">Taupunkt innen</button>
-        <button class="btn" data-series="dew_out">Taupunkt außen</button>
-        <button class="btn" data-series="hum_in">Rel. Feuchte innen</button>
-        <button class="btn" data-series="solar_theo">Solar theoretisch</button>
-        <button class="btn active" data-series="solar_meas">Solar gemessen</button>
-        <button class="btn" data-series="cloudiness">Bewölkung</button>
+        <button class="btn active" data-series="temp" aria-pressed="true">Temperatur außen</button>
+        <button class="btn" data-series="temp_in" aria-pressed="false">Temperatur innen</button>
+        <button class="btn" data-series="wind" aria-pressed="false">Windböen</button>
+        <button class="btn active" data-series="rain_rate" aria-pressed="true">Niederschlag</button>
+        <button class="btn" data-series="traffic_flow" aria-pressed="false">Verkehrsfluss</button>
+        <button class="btn" data-series="traffic_noise" aria-pressed="false">Verkehrslärm</button>
+        <button class="btn" data-series="dew_in" aria-pressed="false">Taupunkt innen</button>
+        <button class="btn" data-series="dew_out" aria-pressed="false">Taupunkt außen</button>
+        <button class="btn" data-series="hum_in" aria-pressed="false">Rel. Feuchte innen</button>
+        <button class="btn" data-series="solar_theo" aria-pressed="false">Solar theoretisch</button>
+        <button class="btn active" data-series="solar_meas" aria-pressed="true">Solar gemessen</button>
+        <button class="btn" data-series="cloudiness" aria-pressed="false">Bewölkung</button>
     </div>
     <div class="chart-container">
         <div class="chart-viewport">

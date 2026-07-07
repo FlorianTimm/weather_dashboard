@@ -28,6 +28,7 @@ export interface CalculatedWeather {
     af_in: Numberish;
     af_out: Numberish;
     laerm_index: Numberish;
+    traffic_noise: Numberish;
     traffic_flow: Numberish;
     schall_leitung: Numberish;
 }
@@ -51,7 +52,8 @@ export type SeriesId =
     | "temp_in"
     | "wind"
     | "rain_rate"
-    | "traffic"
+    | "traffic_flow"
+    | "traffic_noise"
     | "dew_in"
     | "dew_out"
     | "hum_in"

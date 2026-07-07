@@ -27,7 +27,7 @@ if ($action === 'live') {
     $af_out = calculateAbsoluteHumidity($current['t1tem'], $current['t1hum']);
 
     // 4. Verkehrsfluss & Lärmindex (Autobahnindex)
-    $traffic_flow = isset($current['traffic_flow']) ? $current['traffic_flow'] : getHamburgTrafficLoad();
+    $traffic_noise = isset($current['traffic_noise']) ? $current['traffic_noise'] : getHamburgTrafficLoad()[1];
 
     $wind_diff = abs($current['t1wdir'] - 135);
     if ($wind_diff > 180) $wind_diff = 360 - $wind_diff;
@@ -35,7 +35,7 @@ if ($action === 'live') {
 
     $w_speed_kmh = msToKmh($current['t1ws']);
     $wind_effect = ($w_speed_kmh < 4) ? 0.2 : (($w_speed_kmh > 28) ? 0.4 : 0.4 + ($w_speed_kmh / 35));
-    $laerm_index = min(100, max(5, round($traffic_flow * $schall_leitung * $wind_effect * 1.8)));
+    $laerm_index = min(100, max(5, round($traffic_noise * $schall_leitung * $wind_effect * 1.8)));
 
     // 5. Live-Solarberechnung auf Basis des Messzeitstempels
     $theoSolarLive = getTheoreticalInsolation($current['zeitstempel']);
@@ -54,7 +54,7 @@ if ($action === 'live') {
         'calculated' => [
             'af_in' => round($af_in, 2),
             'af_out' => round($af_out, 2),
-            'traffic_flow' => round($traffic_flow, 1),
+            'traffic_noise' => round($traffic_noise, 1),
             'schall_leitung' => round($schall_leitung * 100, 0),
             'laerm_index' => $laerm_index,
             'wind_speed_kmh' => round($w_speed_kmh, 1),
@@ -77,18 +77,18 @@ if ($action === 'chart') {
     $endOfDay = $dateParam . ' 23:59:59';
 
     if ($range === '7d') {
-        $stmt = $pdo->query("SELECT DATE_FORMAT(zeitstempel, '%Y-%m-%d %H:00:00') as ts, AVG(t1tem) as temp, AVG(intem) as temp_in, AVG(t1dew) as dew_out, MAX(t1wgust) as wind, AVG(t1wdir) as wind_dir, MAX(t1rainra) as rain_rate, AVG(t1hum) as hum_out, AVG(inhum) as hum_in, AVG(t1solrad) as solar, AVG(traffic_flow) as traffic FROM wetterdaten WHERE zeitstempel >= DATE_SUB('$startOfDay', INTERVAL 6 DAY) AND zeitstempel <= '$endOfDay' GROUP BY ts ORDER BY ts ASC");
+        $stmt = $pdo->query("SELECT DATE_FORMAT(zeitstempel, '%Y-%m-%d %H:00:00') as ts, AVG(t1tem) as temp, AVG(intem) as temp_in, AVG(t1dew) as dew_out, MAX(t1wgust) as wind, AVG(t1wdir) as wind_dir, MAX(t1rainra) as rain_rate, AVG(t1hum) as hum_out, AVG(inhum) as hum_in, AVG(t1solrad) as solar, AVG(traffic_flow) as traffic_flow, AVG(traffic_noise) as traffic_noise FROM wetterdaten WHERE zeitstempel >= DATE_SUB('$startOfDay', INTERVAL 6 DAY) AND zeitstempel <= '$endOfDay' GROUP BY ts ORDER BY ts ASC");
         $format = 'd.m. H:i';
     } elseif ($range === '30d') {
-        $stmt = $pdo->query("SELECT DATE_FORMAT(zeitstempel, '%Y-%m-%d %H:00:00') as ts, AVG(t1tem) as temp, AVG(intem) as temp_in, AVG(t1dew) as dew_out, MAX(t1wgust) as wind, AVG(t1wdir) as wind_dir, MAX(t1rainra) as rain_rate, AVG(t1hum) as hum_out, AVG(inhum) as hum_in, AVG(t1solrad) as solar, AVG(traffic_flow) as traffic FROM wetterdaten WHERE zeitstempel >= DATE_SUB('$startOfDay', INTERVAL 29 DAY) AND zeitstempel <= '$endOfDay' GROUP BY FLOOR(HOUR(zeitstempel)/4), DATE(zeitstempel) ORDER BY ts ASC");
+        $stmt = $pdo->query("SELECT DATE_FORMAT(zeitstempel, '%Y-%m-%d %H:00:00') as ts, AVG(t1tem) as temp, AVG(intem) as temp_in, AVG(t1dew) as dew_out, MAX(t1wgust) as wind, AVG(t1wdir) as wind_dir, MAX(t1rainra) as rain_rate, AVG(t1hum) as hum_out, AVG(inhum) as hum_in, AVG(t1solrad) as solar, AVG(traffic_flow) as traffic_flow, AVG(traffic_noise) as traffic_noise FROM wetterdaten WHERE zeitstempel >= DATE_SUB('$startOfDay', INTERVAL 29 DAY) AND zeitstempel <= '$endOfDay' GROUP BY FLOOR(HOUR(zeitstempel)/4), DATE(zeitstempel) ORDER BY ts ASC");
         $format = 'd.m.';
     } else {
-        $stmt = $pdo->query("SELECT zeitstempel as ts, t1tem as temp, intem as temp_in, t1dew as dew_out, t1wgust as wind, t1wdir as wind_dir, t1rainra as rain_rate, t1hum as hum_out, inhum as hum_in, t1solrad as solar, traffic_flow as traffic FROM wetterdaten WHERE zeitstempel >= '$startOfDay' AND zeitstempel <= '$endOfDay' ORDER BY ts ASC");
+        $stmt = $pdo->query("SELECT zeitstempel as ts, t1tem as temp, intem as temp_in, t1dew as dew_out, t1wgust as wind, t1wdir as wind_dir, t1rainra as rain_rate, t1hum as hum_out, inhum as hum_in, t1solrad as solar, traffic_flow, traffic_noise FROM wetterdaten WHERE zeitstempel >= '$startOfDay' AND zeitstempel <= '$endOfDay' ORDER BY ts ASC");
         $format = 'H:i';
     }
 
     $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    $payload = ['labels' => [], 'timestamps' => [], 'temp' => [], 'temp_in' => [], 'dew_in' => [], 'dew_out' => [], 'wind' => [], 'wind_dir' => [], 'rain_rate' => [], 'hum_out' => [], 'hum_in' => [], 'solar_meas' => [], 'solar_theo' => [], 'cloudiness' => [], 'traffic' => []];
+    $payload = ['labels' => [], 'timestamps' => [], 'temp' => [], 'temp_in' => [], 'dew_in' => [], 'dew_out' => [], 'wind' => [], 'wind_dir' => [], 'rain_rate' => [], 'hum_out' => [], 'hum_in' => [], 'solar_meas' => [], 'solar_theo' => [], 'cloudiness' => [], 'traffic_flow' => [], 'traffic_noise' => []];
 
     foreach ($rows as $r) {
         $dateTimeStr = $r['ts'];
@@ -105,7 +105,8 @@ if ($action === 'chart') {
         $payload['rain_rate'][] = round($r['rain_rate'] ?? 0, 1);
         $payload['hum_out'][] = round($r['hum_out'], 1);
         $payload['hum_in'][] = round($r['hum_in'], 1);
-        $payload['traffic'][] = round($r['traffic'] ?? 50, 0);
+        $payload['traffic_flow'][] = $r['traffic_flow'] === null ? null : round($r['traffic_flow'], 0);
+        $payload['traffic_noise'][] = $r['traffic_noise'] === null ? null : round($r['traffic_noise'], 0);
 
         $measuredSolar = round($r['solar'] ?? 0, 1);
         $theoSolar = getTheoreticalInsolation($dateTimeStr);
