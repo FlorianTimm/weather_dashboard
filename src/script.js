@@ -1,3 +1,5 @@
+import Chart from 'chart.js/auto';
+
 document.addEventListener('DOMContentLoaded', () => {
     // --- PWA SERVICE WORKER REGISTRIERUNG ---
     if ('serviceWorker' in navigator) {
@@ -8,9 +10,38 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Globale Steuervariablen
     let currentRange = '24h';
-    let currentMode = 'klima';
+    let activeSeries = new Set(['temp', 'wind', 'traffic']);
     let chartInstance = null;
+    let windRoseInstance = null;
     let cachedChartData = null;
+
+    const windSectorLabels = ['N', 'NO', 'O', 'SO', 'S', 'SW', 'W', 'NW'];
+
+    const chartPresets = {
+        klima: ['temp', 'wind', 'traffic'],
+        feuchte: ['af_in', 'af_out', 'hum_in'],
+        solar: ['solar_theo', 'solar_meas', 'cloudiness'],
+    };
+
+    const chartSeries = {
+        temp: { label: 'Temperatur Außen (°C)', dataKey: 'temp', borderColor: '#e74c3c', backgroundColor: 'rgba(231, 76, 60, 0.05)', yAxisID: 'temperature', borderWidth: 2, pointRadius: 0, fill: true, tension: 0.3 },
+        wind: { label: 'Windböen (km/h)', dataKey: 'wind', borderColor: '#3498db', yAxisID: 'wind', borderWidth: 2, pointRadius: 0, fill: false, tension: 0.3 },
+        traffic: { label: 'Autobahn-Verkehrsfluss (%)', dataKey: 'traffic', borderColor: '#2ecc71', yAxisID: 'percent', borderWidth: 1.5, pointRadius: 0, fill: false, borderDash: [2, 2], tension: 0.2 },
+        af_in: { label: 'Abs. Feuchte Innen (g/m³)', dataKey: 'af_in', borderColor: '#2c3e50', yAxisID: 'humidityAbs', borderWidth: 2.5, pointRadius: 0, fill: false, tension: 0.2 },
+        af_out: { label: 'Abs. Feuchte Außen (g/m³)', dataKey: 'af_out', borderColor: '#9b59b6', yAxisID: 'humidityAbs', borderWidth: 2, pointRadius: 0, fill: false, tension: 0.2 },
+        hum_in: { label: 'Rel. Feuchte Innen (%)', dataKey: 'hum_in', borderColor: '#f1c40f', yAxisID: 'percent', borderWidth: 1.5, pointRadius: 0, fill: false, borderDash: [4, 4] },
+        solar_theo: { label: 'Theoretische Einstrahlung (W/m²)', dataKey: 'solar_theo', borderColor: '#e67e22', yAxisID: 'solar', borderDash: [6, 4], borderWidth: 1.5, pointRadius: 0, fill: false },
+        solar_meas: { label: 'Gemessene Einstrahlung (W/m²)', dataKey: 'solar_meas', borderColor: '#f1c40f', backgroundColor: 'rgba(241, 196, 15, 0.15)', yAxisID: 'solar', borderWidth: 2.5, pointRadius: 0, fill: true, tension: 0.2 },
+        cloudiness: { label: 'Berechneter Bewölkungsgrad (%)', dataKey: 'cloudiness', borderColor: '#7f8c8d', yAxisID: 'percent', borderWidth: 2, pointRadius: 0, fill: false, tension: 0.2 },
+    };
+
+    const chartScales = {
+        temperature: { type: 'linear', display: true, position: 'left', title: { display: true, text: 'Temperatur °C' } },
+        wind: { type: 'linear', display: true, position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: 'Wind km/h' } },
+        percent: { type: 'linear', display: true, position: 'right', grid: { drawOnChartArea: false }, min: 0, max: 100, title: { display: true, text: 'Prozent %' } },
+        humidityAbs: { type: 'linear', display: true, position: 'left', grid: { drawOnChartArea: false }, title: { display: true, text: 'Abs. Feuchte g/m³' } },
+        solar: { type: 'linear', display: true, position: 'right', grid: { drawOnChartArea: false }, min: 0, title: { display: true, text: 'Solar W/m²' } },
+    };
 
     function bftCalc(ms) {
         if (ms < 0.3) return 0; if (ms < 1.6) return 1; if (ms < 3.4) return 2; if (ms < 5.5) return 3;
@@ -108,6 +139,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const response = await fetch(`api.php?action=chart&range=${currentRange}`);
             cachedChartData = await response.json();
             renderChart();
+            renderWindRose();
         } catch (e) { console.error("Diagramm-Fehler", e); }
     }
 
@@ -116,38 +148,81 @@ document.addEventListener('DOMContentLoaded', () => {
         const ctx = document.getElementById('mainChart').getContext('2d');
         if (chartInstance) chartInstance.destroy();
 
-        let datasets = [];
-        let scales = { y: { type: 'linear', display: true, position: 'left' } };
-
-        if (currentMode === 'klima') {
-            datasets = [
-                { label: 'Temperatur Außen (°C)', data: cachedChartData.temp, borderColor: '#e74c3c', backgroundColor: 'rgba(231, 76, 60, 0.05)', yAxisID: 'y', borderWidth: 2, pointRadius: 0, fill: true, tension: 0.3 },
-                { label: 'Windböen (km/h)', data: cachedChartData.wind, borderColor: '#3498db', yAxisID: 'y1', borderWidth: 2, pointRadius: 0, fill: false, tension: 0.3 },
-                // DAS NEUE HISTORISCHE VERKEHRSDIAGRAMM ALS DRITTE LINIE:
-                { label: 'Autobahn-Verkehrsfluss (%)', data: cachedChartData.traffic, borderColor: '#2ecc71', yAxisID: 'y2', borderWidth: 1.5, pointRadius: 0, fill: false, borderDash: [2, 2], tension: 0.2 }
-            ];
-            scales.y1 = { type: 'linear', display: true, position: 'right', grid: { drawOnChartArea: false } };
-            scales.y2 = { type: 'linear', display: true, position: 'right', grid: { drawOnChartArea: false }, min: 0, max: 100, title: { display: true, text: 'Verkehrsfluss %' } };
-        } else if (currentMode === 'feuchte') {
-            datasets = [
-                { label: 'Abs. Feuchte Innen (g/m³)', data: cachedChartData.af_in, borderColor: '#2c3e50', borderWidth: 2.5, pointRadius: 0, fill: false, tension: 0.2 },
-                { label: 'Abs. Feuchte Außen (g/m³)', data: cachedChartData.af_out, borderColor: '#9b59b6', borderWidth: 2, pointRadius: 0, fill: false, tension: 0.2 },
-                { label: 'Rel. Feuchte Innen (%)', data: cachedChartData.hum_in, borderColor: '#f1c40f', yAxisID: 'y1', borderWidth: 1.5, pointRadius: 0, fill: false, borderDash: [4, 4] }
-            ];
-            scales.y1 = { type: 'linear', display: true, position: 'right', grid: { drawOnChartArea: false }, min: 20, max: 100 };
-        } else if (currentMode === 'solar') {
-            datasets = [
-                { label: 'Theoretische Einstrahlung (W/m²)', data: cachedChartData.solar_theo, borderColor: '#e67e22', borderDash: [6, 4], borderWidth: 1.5, pointRadius: 0, fill: false },
-                { label: 'Gemessene Einstrahlung (W/m²)', data: cachedChartData.solar_meas, borderColor: '#f1c40f', backgroundColor: 'rgba(241, 196, 15, 0.15)', borderWidth: 2.5, pointRadius: 0, fill: true, tension: 0.2 },
-                { label: 'Berechneter Bewölkungsgrad (%)', data: cachedChartData.cloudiness, borderColor: '#7f8c8d', yAxisID: 'y1', borderWidth: 2, pointRadius: 0, fill: false, tension: 0.2 }
-            ];
-            scales.y1 = { type: 'linear', display: true, position: 'right', min: 0, max: 100, grid: { drawOnChartArea: false } };
-        }
+        const selectedSeries = Array.from(activeSeries);
+        const datasets = selectedSeries.map(seriesId => ({
+            ...chartSeries[seriesId],
+            data: cachedChartData[chartSeries[seriesId].dataKey],
+        }));
+        const scales = selectedSeries.reduce((usedScales, seriesId) => {
+            const axisId = chartSeries[seriesId].yAxisID;
+            usedScales[axisId] = chartScales[axisId];
+            return usedScales;
+        }, {});
 
         chartInstance = new Chart(ctx, {
             type: 'line',
             data: { labels: cachedChartData.labels, datasets: datasets },
-            options: { responsive: true, interaction: { mode: 'index', intersect: false }, scales: scales }
+            options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, scales: scales }
+        });
+    }
+
+    function renderWindRose() {
+        if (!cachedChartData || !cachedChartData.wind_dir) return;
+
+        const sectorTotals = new Array(windSectorLabels.length).fill(0);
+        const sectorCounts = new Array(windSectorLabels.length).fill(0);
+
+        cachedChartData.wind_dir.forEach((direction, index) => {
+            const windSpeed = Number(cachedChartData.wind[index]);
+            const degrees = Number(direction);
+            if (!Number.isFinite(windSpeed) || !Number.isFinite(degrees)) return;
+
+            const sectorIndex = Math.round((((degrees % 360) + 360) % 360) / 45) % windSectorLabels.length;
+            sectorTotals[sectorIndex] += windSpeed;
+            sectorCounts[sectorIndex] += 1;
+        });
+
+        const sectorAverages = sectorTotals.map((total, index) => sectorCounts[index] ? Number((total / sectorCounts[index]).toFixed(1)) : 0);
+        const dominantIndex = sectorAverages.indexOf(Math.max(...sectorAverages));
+        const validCount = sectorCounts.reduce((sum, count) => sum + count, 0);
+        const summary = document.getElementById('wind-rose-summary');
+
+        if (summary) {
+            summary.innerText = validCount
+                ? `Dominante Windrichtung: ${windSectorLabels[dominantIndex]} mit Ø ${sectorAverages[dominantIndex].toLocaleString('de-DE')} km/h Böen.`
+                : 'Für diesen Zeitraum liegen keine Windrichtungsdaten vor.';
+        }
+
+        const ctx = document.getElementById('windRoseChart').getContext('2d');
+        if (windRoseInstance) windRoseInstance.destroy();
+
+        windRoseInstance = new Chart(ctx, {
+            type: 'polarArea',
+            data: {
+                labels: windSectorLabels,
+                datasets: [{
+                    label: 'Ø Windböen (km/h)',
+                    data: sectorAverages,
+                    backgroundColor: ['#2c3e50', '#1f77b4', '#3498db', '#2ecc71', '#f1c40f', '#e67e22', '#e74c3c', '#9b59b6'],
+                    borderColor: '#ffffff',
+                    borderWidth: 2,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'right' },
+                    tooltip: {
+                        callbacks: {
+                            label: context => `${context.label}: ${context.raw.toLocaleString('de-DE')} km/h Ø Böen (${sectorCounts[context.dataIndex]} Messpunkte)`,
+                        }
+                    }
+                },
+                scales: {
+                    r: { beginAtZero: true, ticks: { backdropColor: 'transparent' } }
+                }
+            }
         });
     }
 
@@ -162,8 +237,35 @@ document.addEventListener('DOMContentLoaded', () => {
     window.changeMode = function (mode, btn) {
         document.querySelectorAll('#mode-buttons .btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
-        currentMode = mode;
+        activeSeries = new Set(chartPresets[mode]);
+        syncSeriesButtons();
         renderChart();
+    }
+
+    window.toggleSeries = function (seriesId, btn) {
+        if (activeSeries.has(seriesId) && activeSeries.size > 1) {
+            activeSeries.delete(seriesId);
+        } else {
+            activeSeries.add(seriesId);
+        }
+
+        btn.classList.toggle('active', activeSeries.has(seriesId));
+        syncPresetButtons();
+        renderChart();
+    }
+
+    function syncSeriesButtons() {
+        document.querySelectorAll('#series-buttons .btn').forEach(btn => {
+            btn.classList.toggle('active', activeSeries.has(btn.dataset.series));
+        });
+    }
+
+    function syncPresetButtons() {
+        const selected = Array.from(activeSeries).sort().join('|');
+        document.querySelectorAll('#mode-buttons .btn').forEach(btn => {
+            const preset = chartPresets[btn.dataset.mode].slice().sort().join('|');
+            btn.classList.toggle('active', selected === preset);
+        });
     }
 
     // Initialisierungs-Lauf

@@ -192,13 +192,65 @@ h2 {
   padding: 20px;
   border-radius: 10px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+  height: 520px;
   margin-bottom: 40px;
+  position: relative;
+}
+.chart-container canvas {
+  display: block;
+  height: 100%;
+  width: 100%;
+}
+.wind-rose-card {
+  align-items: center;
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+  display: grid;
+  gap: 20px;
+  grid-template-columns: minmax(220px, 0.85fr) minmax(280px, 1.15fr);
+  margin-bottom: 40px;
+  padding: 20px;
+}
+.wind-rose-card h3 {
+  color: #2c3e50;
+  font-size: 1.2em;
+  margin: 0 0 10px;
+}
+.wind-rose-card p {
+  color: #4a5568;
+  font-size: 1em;
+  font-weight: 600;
+  line-height: 1.45;
+  margin: 0;
+}
+.wind-rose-chart {
+  height: 360px;
+  position: relative;
+}
+.wind-rose-chart canvas {
+  display: block;
+  height: 100%;
+  width: 100%;
 }
 .btn-group {
   display: flex;
   justify-content: center;
+  flex-wrap: wrap;
   gap: 10px;
   margin-bottom: 15px;
+}
+.preset-group {
+  background: #ffffff;
+  border: 1px solid #d7e1ea;
+  border-radius: 10px;
+  box-shadow: 0 2px 5px rgba(44, 62, 80, 0.06);
+  margin: 0 auto 14px;
+  max-width: max-content;
+  padding: 8px;
+}
+.series-group {
+  margin-bottom: 20px;
 }
 .btn {
   background: #e2e8f0;
@@ -213,4 +265,40 @@ h2 {
 .btn.active {
   background: #3498db;
   color: #fff;
+}
+.preset-btn {
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  color: #2c3e50;
+  padding: 10px 18px;
+}
+.preset-btn.active {
+  background: #eaf5ff;
+  border-color: #3498db;
+  box-shadow: inset 0 0 0 1px #3498db;
+  color: #1f618d;
+}
+.series-group .btn.active {
+  background: #2c3e50;
+}
+
+@media (max-width: 700px) {
+  body {
+    padding: 12px;
+  }
+
+  .chart-container {
+    height: 72vh;
+    min-height: 440px;
+    padding: 12px;
+  }
+
+  .wind-rose-card {
+    grid-template-columns: 1fr;
+    padding: 14px;
+  }
+
+  .wind-rose-chart {
+    height: 330px;
+  }
 }

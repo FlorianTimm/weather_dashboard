@@ -69,24 +69,25 @@ if ($action === 'chart') {
     $range = $_GET['range'] ?? '24h';
 
     if ($range === '7d') {
-        $stmt = $pdo->query("SELECT DATE_FORMAT(zeitstempel, '%Y-%m-%d %H:00:00') as ts, AVG(t1tem) as temp, MAX(t1wgust) as wind, AVG(t1hum) as hum_out, AVG(inhum) as hum_in, AVG(intem) as temp_in, AVG(t1solrad) as solar, AVG(traffic_flow) as traffic FROM wetterdaten WHERE zeitstempel >= NOW() - INTERVAL 7 DAY GROUP BY ts ORDER BY ts ASC");
+        $stmt = $pdo->query("SELECT DATE_FORMAT(zeitstempel, '%Y-%m-%d %H:00:00') as ts, AVG(t1tem) as temp, MAX(t1wgust) as wind, AVG(t1wdir) as wind_dir, AVG(t1hum) as hum_out, AVG(inhum) as hum_in, AVG(intem) as temp_in, AVG(t1solrad) as solar, AVG(traffic_flow) as traffic FROM wetterdaten WHERE zeitstempel >= NOW() - INTERVAL 7 DAY GROUP BY ts ORDER BY ts ASC");
         $format = 'd.m. H:i';
     } elseif ($range === '30d') {
-        $stmt = $pdo->query("SELECT DATE_FORMAT(zeitstempel, '%Y-%m-%d %H:00:00') as ts, AVG(t1tem) as temp, MAX(t1wgust) as wind, AVG(t1hum) as hum_out, AVG(inhum) as hum_in, AVG(intem) as temp_in, AVG(t1solrad) as solar, AVG(traffic_flow) as traffic FROM wetterdaten WHERE zeitstempel >= NOW() - INTERVAL 30 DAY GROUP BY FLOOR(HOUR(zeitstempel)/4), DATE(zeitstempel) ORDER BY ts ASC");
+        $stmt = $pdo->query("SELECT DATE_FORMAT(zeitstempel, '%Y-%m-%d %H:00:00') as ts, AVG(t1tem) as temp, MAX(t1wgust) as wind, AVG(t1wdir) as wind_dir, AVG(t1hum) as hum_out, AVG(inhum) as hum_in, AVG(intem) as temp_in, AVG(t1solrad) as solar, AVG(traffic_flow) as traffic FROM wetterdaten WHERE zeitstempel >= NOW() - INTERVAL 30 DAY GROUP BY FLOOR(HOUR(zeitstempel)/4), DATE(zeitstempel) ORDER BY ts ASC");
         $format = 'd.m.';
     } else {
-        $stmt = $pdo->query("SELECT zeitstempel as ts, t1tem as temp, t1wgust as wind, t1hum as hum_out, inhum as hum_in, intem as temp_in, t1solrad as solar, traffic_flow as traffic FROM wetterdaten WHERE zeitstempel >= NOW() - INTERVAL 1 DAY ORDER BY ts ASC");
+        $stmt = $pdo->query("SELECT zeitstempel as ts, t1tem as temp, t1wgust as wind, t1wdir as wind_dir, t1hum as hum_out, inhum as hum_in, intem as temp_in, t1solrad as solar, traffic_flow as traffic FROM wetterdaten WHERE zeitstempel >= NOW() - INTERVAL 1 DAY ORDER BY ts ASC");
         $format = 'H:i';
     }
 
     $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    $payload = ['labels' => [], 'temp' => [], 'wind' => [], 'hum_out' => [], 'hum_in' => [], 'af_in' => [], 'af_out' => [], 'solar_meas' => [], 'solar_theo' => [], 'cloudiness' => [], 'traffic' => []];
+    $payload = ['labels' => [], 'temp' => [], 'wind' => [], 'wind_dir' => [], 'hum_out' => [], 'hum_in' => [], 'af_in' => [], 'af_out' => [], 'solar_meas' => [], 'solar_theo' => [], 'cloudiness' => [], 'traffic' => []];
 
     foreach ($rows as $r) {
         $dateTimeStr = $r['ts'];
         $payload['labels'][] = date($format, strtotime($dateTimeStr));
         $payload['temp'][] = round($r['temp'], 1);
         $payload['wind'][] = round(msToKmh($r['wind']), 1);
+        $payload['wind_dir'][] = round($r['wind_dir'], 0);
         $payload['hum_out'][] = round($r['hum_out'], 1);
         $payload['hum_in'][] = round($r['hum_in'], 1);
         $payload['traffic'][] = round($r['traffic'] ?? 50, 0);

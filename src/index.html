@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Wetter- & Umwelt-Leitstand</title>
     <link rel="stylesheet" href="style.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
 
@@ -97,16 +96,36 @@
         <button class="btn" onclick="changeRange('7d', this)">7 Tage</button>
         <button class="btn" onclick="changeRange('30d', this)">30 Tage</button>
     </div>
-    <div class="btn-group" id="mode-buttons">
-        <button class="btn active" onclick="changeMode('klima', this)">Klima & Wind</button>
-        <button class="btn" onclick="changeMode('feuchte', this)">Feuchtigkeits-Trend</button>
-        <button class="btn" onclick="changeMode('solar', this)">☀️ Solar & Bewölkung</button>
+    <div class="btn-group preset-group" id="mode-buttons">
+        <button class="btn preset-btn active" data-mode="klima" onclick="changeMode('klima', this)">Klima & Wind</button>
+        <button class="btn preset-btn" data-mode="feuchte" onclick="changeMode('feuchte', this)">Feuchtigkeits-Trend</button>
+        <button class="btn preset-btn" data-mode="solar" onclick="changeMode('solar', this)">☀️ Solar & Bewölkung</button>
+    </div>
+    <div class="btn-group series-group" id="series-buttons">
+        <button class="btn active" data-series="temp" onclick="toggleSeries('temp', this)">Temperatur</button>
+        <button class="btn active" data-series="wind" onclick="toggleSeries('wind', this)">Windböen</button>
+        <button class="btn active" data-series="traffic" onclick="toggleSeries('traffic', this)">Verkehr</button>
+        <button class="btn" data-series="af_in" onclick="toggleSeries('af_in', this)">Abs. Feuchte innen</button>
+        <button class="btn" data-series="af_out" onclick="toggleSeries('af_out', this)">Abs. Feuchte außen</button>
+        <button class="btn" data-series="hum_in" onclick="toggleSeries('hum_in', this)">Rel. Feuchte innen</button>
+        <button class="btn" data-series="solar_theo" onclick="toggleSeries('solar_theo', this)">Solar theoretisch</button>
+        <button class="btn" data-series="solar_meas" onclick="toggleSeries('solar_meas', this)">Solar gemessen</button>
+        <button class="btn" data-series="cloudiness" onclick="toggleSeries('cloudiness', this)">Bewölkung</button>
     </div>
     <div class="chart-container">
         <canvas id="mainChart"></canvas>
     </div>
+    <div class="wind-rose-card">
+        <div>
+            <h3>🧭 Windrichtung & Böenverteilung</h3>
+            <p id="wind-rose-summary">-</p>
+        </div>
+        <div class="wind-rose-chart">
+            <canvas id="windRoseChart"></canvas>
+        </div>
+    </div>
 </div>
 
-<script src="script.js"></script>
+<script src="script.js" type="module"></script>
 </body>
 </html>
