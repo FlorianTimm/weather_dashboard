@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wetter- & Umwelt-Leitstand</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+<div class="container">
+    <h1>🌤️ Wohnraum-, Wetter- & Umweltcenter</h1>
+    <div class="system-status">Datenzeitstempel: <strong id="live-time">-</strong> | Status: <span class="status-dot">● Live-Verbindung aktiv</span></div>
+
+    <!-- HELIOS KWL LÜFTUNGSASSISTENT -->
+    <div id="kwl-card" class="special-box">
+        <div class="special-header">
+            <div class="special-title">🏠 Helios ZEB EC Lüftungsassistent</div>
+            <div id="kwl-badge" class="special-badge">-</div>
+        </div>
+        <p id="kwl-text"></p>
+        <div class="kwl-grid">
+            <div class="kwl-sub-box"><span class="sub-label">Abs. Feuchte Innen</span><br><strong id="live-af-in">-</strong></div>
+            <div class="kwl-sub-box"><span class="sub-label">Abs. Feuchte Außen</span><br><strong id="live-af-out">-</strong></div>
+            <div class="kwl-sub-box"><span class="sub-label">Lüftungs-Effekt</span><br><strong id="live-kwl-trend">-</strong></div>
+        </div>
+    </div>
+
+    <!-- AKUSTISCHES GARTEN-BAROMETER -->
+    <div id="noise-card" class="special-box">
+        <div class="special-header">
+            <div class="special-title">🤫 Akustisches Garten-Barometer (Schallprognose A1 / A7)</div>
+            <div id="noise-badge" class="special-badge">-</div>
+        </div>
+        <p id="noise-text"></p>
+        <div id="noise-factors"></div>
+    </div>
+
+    <!-- LIVE CLUSTER -->
+    <h2>Echtzeit-Klimadaten</h2>
+    <div class="grid">
+        <div class="card home">
+            <h3>🏠 Innenraum (Soll: 20-22°C)</h3>
+            <div class="value-display"><span id="live-t-in" class="main-value">-</span><span class="unit"> °C</span></div>
+            <div class="data-list">
+                <div class="data-row"><span class="label">Relative Feuchte:</span><span id="live-rh-in" class="val">-</span></div>
+                <div class="data-row"><span class="label">Zustand:</span><span id="live-in-status" class="val">-</span></div>
+            </div>
+        </div>
+        <div class="card warning">
+            <h3>🌡️ Außenklima</h3>
+            <div class="value-display"><span id="live-t-out" class="main-value">-</span><span class="unit"> °C</span></div>
+            <div class="data-list">
+                <div class="data-row"><span class="label">Relative Feuchte:</span><span id="live-rh-out" class="val">-</span></div>
+                <div class="data-row"><span class="label">Windrichtung:</span><span id="live-wdir" class="val">-</span></div>
+				<div class="data-row"><span class="label">Sonne aktuell:</span><span id="live-solar" class="val">-</span></div>
+                <div class="data-row"><span class="label">Bewölkung (ber.):</span><span id="live-cloud" class="val">-</span></div>
+            </div>
+        </div>
+        <div class="card success">
+            <h3>💧 Niederschlag</h3>
+            <div class="value-display"><span id="live-rain" class="main-value">-</span><span class="unit"> mm</span></div>
+            <div class="data-list">
+                <div class="data-row"><span class="label">Regenrate aktuell:</span><span id="live-rainrate" class="val">-</span></div>
+            </div>
+        </div>
+        <div class="card neutral">
+            <h3>💨 Windgeschwindigkeiten</h3>
+            <div class="value-display"><span id="live-ws" class="main-value">-</span><span class="unit-small"> km/h</span></div>
+            <div class="data-list">
+                <div class="data-row"><span class="label">Windstärke:</span><span id="live-bft" class="val">-</span></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- HISTORISCHE EXTREME -->
+    <h2>🏆 Historische Allzeit-Rekorde (Wann war das?)</h2>
+    <div class="grid">
+        <div class="card warning"><h3>Heißester Tag</h3><div class="value-display"><span id="rec-max-t" class="main-value">-</span></div></div>
+        <div class="card cold"><h3>Kältester Tag</h3><div class="value-display"><span id="rec-min-t" class="main-value">-</span></div></div>
+        <div class="card"><h3>Stärkster Sturm</h3><div class="value-display"><span id="rec-max-w" class="main-value">-</span></div></div>
+        <div class="card success"><h3>Meister Regen (Tag)</h3><div class="value-display"><span id="rec-max-r" class="main-value">-</span></div></div>
+    </div>
+
+    <!-- DJI FLUGCHECK -->
+    <div class="drone-section">
+        <h3>🎮 DJI Mini 2 Flugwetter-Check</h3>
+        <div id="drone-bar" class="drone-status-bar">-</div>
+        <div class="grid drone-grid" id="drone-details"></div>
+    </div>
+
+    <!-- DIAGRAMME -->
+    <h2>📉 Analyse & Verlaufsdiagramme</h2>
+    <div class="btn-group" id="range-buttons">
+        <button class="btn active" onclick="changeRange('24h', this)">24 Stunden</button>
+        <button class="btn" onclick="changeRange('7d', this)">7 Tage</button>
+        <button class="btn" onclick="changeRange('30d', this)">30 Tage</button>
+    </div>
+    <div class="btn-group" id="mode-buttons">
+        <button class="btn active" onclick="changeMode('klima', this)">Klima & Wind</button>
+        <button class="btn" onclick="changeMode('feuchte', this)">Feuchtigkeits-Trend</button>
+        <button class="btn" onclick="changeMode('solar', this)">☀️ Solar & Bewölkung</button>
+    </div>
+    <div class="chart-container">
+        <canvas id="mainChart"></canvas>
+    </div>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
