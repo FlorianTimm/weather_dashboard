@@ -148,6 +148,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const ctx = document.getElementById('mainChart').getContext('2d');
         if (chartInstance) chartInstance.destroy();
 
+        const isMobile = window.matchMedia('(max-width: 700px)').matches;
         const selectedSeries = Array.from(activeSeries);
         const datasets = selectedSeries.map(seriesId => ({
             ...chartSeries[seriesId],
@@ -155,19 +156,45 @@ document.addEventListener('DOMContentLoaded', () => {
         }));
         const scales = selectedSeries.reduce((usedScales, seriesId) => {
             const axisId = chartSeries[seriesId].yAxisID;
-            usedScales[axisId] = chartScales[axisId];
+            usedScales[axisId] = getResponsiveScale(chartScales[axisId], isMobile);
             return usedScales;
-        }, {});
+        }, {
+            x: {
+                ticks: { autoSkip: true, maxRotation: isMobile ? 45 : 0, maxTicksLimit: isMobile ? 8 : 12 },
+            },
+        });
 
         chartInstance = new Chart(ctx, {
             type: 'line',
             data: { labels: cachedChartData.labels, datasets: datasets },
-            options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, scales: scales }
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                plugins: {
+                    legend: {
+                        display: !isMobile,
+                        position: isMobile ? 'bottom' : 'top',
+                        labels: { boxWidth: isMobile ? 16 : 40, font: { size: isMobile ? 11 : 12 } },
+                    },
+                },
+                scales: scales,
+            }
         });
+    }
+
+    function getResponsiveScale(scale, isMobile) {
+        return {
+            ...scale,
+            title: scale.title ? { ...scale.title, display: scale.title.display && !isMobile } : scale.title,
+            ticks: { ...scale.ticks, font: { size: isMobile ? 10 : 12 }, maxTicksLimit: isMobile ? 6 : 10 },
+        };
     }
 
     function renderWindRose() {
         if (!cachedChartData || !cachedChartData.wind_dir) return;
+
+        const isMobile = window.matchMedia('(max-width: 700px)').matches;
 
         const sectorTotals = new Array(windSectorLabels.length).fill(0);
         const sectorCounts = new Array(windSectorLabels.length).fill(0);
@@ -212,7 +239,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: {
-                    legend: { position: 'right' },
+                    legend: { display: !isMobile, position: 'right' },
                     tooltip: {
                         callbacks: {
                             label: context => `${context.label}: ${context.raw.toLocaleString('de-DE')} km/h Ø Böen (${sectorCounts[context.dataIndex]} Messpunkte)`,

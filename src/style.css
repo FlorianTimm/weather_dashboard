@@ -194,9 +194,16 @@ h2 {
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
   height: 520px;
   margin-bottom: 40px;
+  overflow-x: auto;
+  overflow-y: hidden;
   position: relative;
 }
-.chart-container canvas {
+.chart-viewport {
+  height: 100%;
+  min-width: 100%;
+  position: relative;
+}
+.chart-viewport canvas {
   display: block;
   height: 100%;
   width: 100%;
@@ -291,6 +298,10 @@ h2 {
     height: 72vh;
     min-height: 440px;
     padding: 12px;
+  }
+
+  .chart-viewport {
+    min-width: 640px;
   }
 
   .wind-rose-card {
