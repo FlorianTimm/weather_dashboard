@@ -483,7 +483,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const selectedSeries = Array.from(activeSeries);
         const datasets = selectedSeries.map((seriesId) => ({
             ...chartSeries[seriesId],
-            data: cachedChartData[chartSeries[seriesId].dataKey],
+            data: buildTimedData(chartSeries[seriesId].dataKey),
         }));
         const scales = selectedSeries.reduce(
             (usedScales, seriesId) => {
@@ -493,10 +493,12 @@ document.addEventListener("DOMContentLoaded", () => {
             },
             {
                 x: {
+                    type: "linear",
                     ticks: {
                         autoSkip: true,
                         maxRotation: isMobile ? 45 : 0,
                         maxTicksLimit: isMobile ? 8 : 12,
+                        callback: (value) => formatTimeTick(value),
                     },
                 },
             },
@@ -518,9 +520,40 @@ document.addEventListener("DOMContentLoaded", () => {
                             font: { size: isMobile ? 11 : 12 },
                         },
                     },
+                    tooltip: {
+                        callbacks: {
+                            title: (items) => items.length ? formatTooltipTime(items[0].parsed.x) : "",
+                        },
+                    },
                 },
                 scales: scales,
             },
+        });
+    }
+
+    function buildTimedData(dataKey) {
+        return cachedChartData[dataKey].map((value, index) => ({
+            x: cachedChartData.timestamps[index],
+            y: value,
+        }));
+    }
+
+    function formatTimeTick(value) {
+        const date = new Date(value);
+        if (currentRange === "30d") {
+            return date.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" });
+        }
+
+        return date.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
+    }
+
+    function formatTooltipTime(value) {
+        const date = new Date(value);
+        return date.toLocaleString("de-DE", {
+            day: "2-digit",
+            month: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit",
         });
     }
 

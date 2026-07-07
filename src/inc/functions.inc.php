@@ -118,36 +118,57 @@ function getHamburgTrafficLoad()
 
 function getTheoreticalInsolation($timestamp)
 {
-    $dt = new DateTime($timestamp);
+    $timezone = new DateTimeZone('Europe/Berlin');
+    $dt = new DateTime($timestamp, $timezone);
+    $dt->setTimezone($timezone);
 
-    // 1. Tag des Jahres (1-365) und Stunde berechnen
-    $dayOfYear = (int) $dt->format('z') + 1;
-    $hour = (int) $dt->format('G') + ((int) $dt->format('i') / 60);
-
-    // 2. Deklination der Sonne (Winkel zur Äquatorebene)
-    $declination = 23.45 * sin(deg2rad((360 / 365) * ($dayOfYear - 80)));
-
-    // 3. Stundenwinkel (12 Uhr Mittag = 0°, pro Stunde 15°)
-    $hourAngle = 15 * ($hour - 12);
-
-    // 4. Breitengrad für deine Region (Seevetal / Hamburg ca. 53.4)
     $latitude = 53.4;
+    $longitude = 10.03;
+    $dayOfYear = (int) $dt->format('z') + 1;
+    $hour = (int) $dt->format('G');
+    $minute = (int) $dt->format('i');
+    $second = (int) $dt->format('s');
+    $timezoneOffsetHours = $timezone->getOffset($dt) / 3600;
 
-    // 5. Sonnenhöhenwinkel (Solar Elevation Angle) berechnen
-    $sinElevation = sin(deg2rad($latitude)) * sin(deg2rad($declination)) +
-        cos(deg2rad($latitude)) * cos(deg2rad($declination)) * cos(deg2rad($hourAngle));
+    $decimalHour = $hour + ($minute / 60) + ($second / 3600);
+    $gamma = (2 * M_PI / 365) * ($dayOfYear - 1 + (($decimalHour - 12) / 24));
 
-    $elevation = rad2deg(asin($sinElevation));
+    $equationOfTime = 229.18 * (
+        0.000075
+        + 0.001868 * cos($gamma)
+        - 0.032077 * sin($gamma)
+        - 0.014615 * cos(2 * $gamma)
+        - 0.040849 * sin(2 * $gamma)
+    );
 
-    // Wenn die Sonne unter dem Horizont steht -> 0 W/m²
-    if ($elevation <= 0) {
+    $declination = 0.006918
+        - 0.399912 * cos($gamma)
+        + 0.070257 * sin($gamma)
+        - 0.006758 * cos(2 * $gamma)
+        + 0.000907 * sin(2 * $gamma)
+        - 0.002697 * cos(3 * $gamma)
+        + 0.00148 * sin(3 * $gamma);
+
+    $timeOffset = $equationOfTime + (4 * $longitude) - (60 * $timezoneOffsetHours);
+    $trueSolarTime = fmod(($decimalHour * 60) + $timeOffset, 1440);
+    if ($trueSolarTime < 0) {
+        $trueSolarTime += 1440;
+    }
+
+    $hourAngle = ($trueSolarTime / 4) - 180;
+    if ($hourAngle < -180) {
+        $hourAngle += 360;
+    }
+
+    $cosZenith = sin(deg2rad($latitude)) * sin($declination)
+        + cos(deg2rad($latitude)) * cos($declination) * cos(deg2rad($hourAngle));
+    $cosZenith = max(-1, min(1, $cosZenith));
+
+    if ($cosZenith <= 0) {
         return 0;
     }
 
-    // 6. Clear-Sky-Insolation nach vereinfachtem Haurwitz-Modell
-    // Berücksichtigt die Abschwächung durch die Erdatmosphäre
-    $solarConstant = 1361; // Solarkonstante außerhalb der Atmosphäre
-    $theoretical = $solarConstant * sin(deg2rad($elevation)) * exp(-0.13 / sin(deg2rad($elevation)));
+    $theoretical = 1098 * $cosZenith * exp(-0.059 / $cosZenith);
 
     return max(0, round($theoretical, 1));
 }

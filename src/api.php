@@ -37,8 +37,8 @@ if ($action === 'live') {
     $wind_effect = ($w_speed_kmh < 4) ? 0.2 : (($w_speed_kmh > 28) ? 0.4 : 0.4 + ($w_speed_kmh / 35));
     $laerm_index = min(100, max(5, round($traffic_flow * $schall_leitung * $wind_effect * 1.8)));
 
-    // 5. Live-Solarberechnung (Korrigerter Datums-String!)
-    $theoSolarLive = getTheoreticalInsolation(date('Y-m-d H:i:s'));
+    // 5. Live-Solarberechnung auf Basis des Messzeitstempels
+    $theoSolarLive = getTheoreticalInsolation($current['zeitstempel']);
     $measuredSolarLive = $current['t1solrad'] ?? 0;
     $cloudinessLive = ($theoSolarLive > 20) ? min(100, max(0, round(100 * (1 - ($measuredSolarLive / $theoSolarLive)), 0))) : 0;
 
@@ -88,13 +88,14 @@ if ($action === 'chart') {
     }
 
     $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    $payload = ['labels' => [], 'temp' => [], 'temp_in' => [], 'dew_in' => [], 'dew_out' => [], 'wind' => [], 'wind_dir' => [], 'rain_rate' => [], 'hum_out' => [], 'hum_in' => [], 'solar_meas' => [], 'solar_theo' => [], 'cloudiness' => [], 'traffic' => []];
+    $payload = ['labels' => [], 'timestamps' => [], 'temp' => [], 'temp_in' => [], 'dew_in' => [], 'dew_out' => [], 'wind' => [], 'wind_dir' => [], 'rain_rate' => [], 'hum_out' => [], 'hum_in' => [], 'solar_meas' => [], 'solar_theo' => [], 'cloudiness' => [], 'traffic' => []];
 
     foreach ($rows as $r) {
         $dateTimeStr = $r['ts'];
         $dewIn = calculateDewPoint($r['temp_in'], $r['hum_in']);
 
         $payload['labels'][] = date($format, strtotime($dateTimeStr));
+        $payload['timestamps'][] = strtotime($dateTimeStr) * 1000;
         $payload['temp'][] = round($r['temp'], 1);
         $payload['temp_in'][] = round($r['temp_in'], 1);
         $payload['dew_in'][] = $dewIn === null ? null : round($dewIn, 1);
