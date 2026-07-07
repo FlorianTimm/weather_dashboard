@@ -96,20 +96,28 @@
         <button class="btn" onclick="changeRange('7d', this)">7 Tage</button>
         <button class="btn" onclick="changeRange('30d', this)">30 Tage</button>
     </div>
+    <div class="chart-date-nav">
+        <button class="btn" onclick="shiftChartDate(-1)">Zurück</button>
+        <span id="chart-date-label" class="chart-date-label">-</span>
+        <button class="btn" onclick="resetChartDate()">Heute</button>
+        <button class="btn" id="chart-next-btn" onclick="shiftChartDate(1)">Vor</button>
+    </div>
     <div class="btn-group preset-group" id="mode-buttons">
-        <button class="btn preset-btn active" data-mode="klima" onclick="changeMode('klima', this)">Klima & Wind</button>
+        <button class="btn preset-btn" data-mode="klima" onclick="changeMode('klima', this)">Klima & Wind</button>
         <button class="btn preset-btn" data-mode="feuchte" onclick="changeMode('feuchte', this)">Feuchtigkeits-Trend</button>
         <button class="btn preset-btn" data-mode="solar" onclick="changeMode('solar', this)">☀️ Solar & Bewölkung</button>
     </div>
     <div class="btn-group series-group" id="series-buttons">
-        <button class="btn active" data-series="temp" onclick="toggleSeries('temp', this)">Temperatur</button>
-        <button class="btn active" data-series="wind" onclick="toggleSeries('wind', this)">Windböen</button>
-        <button class="btn active" data-series="traffic" onclick="toggleSeries('traffic', this)">Verkehr</button>
-        <button class="btn" data-series="af_in" onclick="toggleSeries('af_in', this)">Abs. Feuchte innen</button>
-        <button class="btn" data-series="af_out" onclick="toggleSeries('af_out', this)">Abs. Feuchte außen</button>
+        <button class="btn active" data-series="temp" onclick="toggleSeries('temp', this)">Temperatur außen</button>
+        <button class="btn" data-series="temp_in" onclick="toggleSeries('temp_in', this)">Temperatur innen</button>
+        <button class="btn" data-series="wind" onclick="toggleSeries('wind', this)">Windböen</button>
+        <button class="btn active" data-series="rain_rate" onclick="toggleSeries('rain_rate', this)">Niederschlag</button>
+        <button class="btn" data-series="traffic" onclick="toggleSeries('traffic', this)">Verkehr</button>
+        <button class="btn" data-series="dew_in" onclick="toggleSeries('dew_in', this)">Taupunkt innen</button>
+        <button class="btn" data-series="dew_out" onclick="toggleSeries('dew_out', this)">Taupunkt außen</button>
         <button class="btn" data-series="hum_in" onclick="toggleSeries('hum_in', this)">Rel. Feuchte innen</button>
         <button class="btn" data-series="solar_theo" onclick="toggleSeries('solar_theo', this)">Solar theoretisch</button>
-        <button class="btn" data-series="solar_meas" onclick="toggleSeries('solar_meas', this)">Solar gemessen</button>
+        <button class="btn active" data-series="solar_meas" onclick="toggleSeries('solar_meas', this)">Solar gemessen</button>
         <button class="btn" data-series="cloudiness" onclick="toggleSeries('cloudiness', this)">Bewölkung</button>
     </div>
     <div class="chart-container">

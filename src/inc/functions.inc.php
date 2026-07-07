@@ -43,6 +43,18 @@ function calculateAbsoluteHumidity($temp, $rh)
     return (216.7 * $e) / ($temp + 273.15);
 }
 
+function calculateDewPoint($temp, $rh)
+{
+    if ($temp === null || $rh === null || $rh <= 0) {
+        return null;
+    }
+
+    $a = 17.62;
+    $b = 243.12;
+    $gamma = (($a * $temp) / ($b + $temp)) + log($rh / 100);
+    return ($b * $gamma) / ($a - $gamma);
+}
+
 // --- LIVE-VERKEHRSLAGE LGV HAMBURG ---
 function getHamburgTrafficLoad()
 {
