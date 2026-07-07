@@ -1,0 +1,27 @@
+{
+  "name": "weather",
+  "version": "1.0.0",
+  "description": "Dieses Projekt verarbeitet Messdaten einer **Bresser 7-in-1 Wetterstation** ueber das Gateway **El Nino** und zeigt sie in einem webbasierten Dashboard an.",
+  "main": "index.js",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/FlorianTimm/weather_dashboard.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/FlorianTimm/weather_dashboard/issues"
+  },
+  "homepage": "https://github.com/FlorianTimm/weather_dashboard#readme",
+  "devDependencies": {
+    "vite": "^8.1.3",
+    "vite-plugin-pwa": "^1.3.0",
+    "vite-plugin-static-copy": "^4.1.1"
+  }
+}
