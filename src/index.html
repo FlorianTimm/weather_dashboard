@@ -77,8 +77,18 @@
     <h2>🌧️ DWD-Niederschlagsradar</h2>
     <div class="radar-section">
         <div id="rainRadarMap" class="radar-map"></div>
+        <div class="radar-controls">
+            <button id="radar-play-toggle" class="btn active" type="button">Pause</button>
+            <span id="radar-time-label" class="radar-time-label">Radarzeit: -</span>
+            <label class="radar-slider-wrap" for="radar-time-slider">
+                <span>Letzte Stunde</span>
+                <input id="radar-time-slider" class="radar-time-slider" type="range" min="0" max="12" value="12" step="1">
+                <span>Jetzt</span>
+            </label>
+            <span id="radar-loop-indicator" class="radar-loop-indicator" aria-live="polite"></span>
+        </div>
         <div class="radar-footer">
-            <span>Aktueller DWD-Radar-Layer: Niederschlagsrate in mm/h</span>
+            <span>DWD-Radaranimation: Niederschlagsrate der letzten Stunde in mm/h</span>
             <img src="https://maps.dwd.de/geoserver/dwd/ows?service=WMS&version=1.3.0&request=GetLegendGraphic&format=image/png&width=20&height=20&layer=Niederschlagsradar" alt="DWD Niederschlagsradar Legende">
         </div>
     </div>
