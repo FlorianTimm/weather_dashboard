@@ -179,3 +179,49 @@ Das Projekt ist ausdruecklich noch nicht fertig. Bekannte Punkte fuer die weiter
 ## Lizenz
 
 Eine Lizenzdatei ist im Repository vorhanden. Details stehen in `LICENCE`.
+
+## Entwicklung (lokal)
+
+Kurze Anleitung, um das Frontend lokal zu entwickeln und zu bauen.
+
+- **Node:** Empfohlen Node 16+ / 18+. Projekt verwendet Vite.
+- Abhängigkeiten installieren:
+
+```bash
+npm install
+```
+
+- Dev-Server starten (Vite):
+
+```bash
+npm run dev
+```
+
+- Produktion bauen:
+
+```bash
+npm run build
+```
+
+- Produktion lokal testen (statischer Server):
+
+```bash
+npm run preview
+```
+
+Hinweis: In Produktion sollte statt `script.ts` die gebaute JS-Datei aus `dist` verwendet werden.
+
+## Änderungen (kurz)
+
+Ich habe kürzlich einige kleine Verbesserungen am Frontend vorgenommen — kurz zusammengefasst:
+
+- Semantik: Dashboard-Container in ein `<main>`-Element verschoben.
+- Accessibility: `role="status"` / `aria-live` für Statusmeldungen; `aria-label`/`role` für Canvas-Elemente; ARIA-Attribute an Controls ergänzt.
+- Performance: `loading="lazy"` für externe Legenden-Grafik; `preconnect` für `maps.dwd.de` hinzugefügt.
+- Codequalität: Inline-`onclick`-Handler entfernt und durch `data-`-Attribute ersetzt; zentrale Event-Registrierung in `src/script.ts` (`registerUIHandlers()`).
+
+Diese Änderungen sind bewusst klein gehalten, um Kompatibilität zu wahren. Weitere Empfehlungen stehen oben im Dokument (Accessibility, PWA, CSP, Tests).
+
+## Mitwirken
+
+Wenn du Änderungen vorschlagen willst: Fork → Branch → PR. Bitte `npm run build` ausführen und sicherstellen, dass keine TypeScript-Fehler entstehen.

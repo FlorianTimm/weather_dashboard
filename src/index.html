@@ -4,13 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Wetter- & Umwelt-Leitstand</title>
+    <meta name="description" content="Echtzeit Wetter- und Umwelt-Dashboard mit DWD-Radar, Diagrammen und Sensorübersicht.">
+    <meta name="theme-color" content="#0a74da">
+    <link rel="preconnect" href="https://maps.dwd.de" crossorigin>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-
-<div class="container">
+ 
+<main class="container">
     <h1>🌤️ Wohnraum-, Wetter- & Umweltcenter</h1>
-    <div class="system-status">Datenzeitstempel: <strong id="live-time">-</strong> | Status: <span class="status-dot">● Live-Verbindung aktiv</span></div>
+    <div class="system-status" role="status" aria-live="polite">Datenzeitstempel: <strong id="live-time">-</strong> | Status: <span class="status-dot">● Live-Verbindung aktiv</span></div>
 
     <!-- HELIOS KWL LÜFTUNGSASSISTENT -->
     <div id="kwl-card" class="special-box">
@@ -78,18 +81,18 @@
     <div class="radar-section">
         <div id="rainRadarMap" class="radar-map"></div>
         <div class="radar-controls">
-            <button id="radar-play-toggle" class="btn active" type="button">Pause</button>
+            <button id="radar-play-toggle" class="btn active" type="button" aria-controls="rainRadarMap" aria-pressed="true" aria-label="Radar Animation anhalten">Pause</button>
             <span id="radar-time-label" class="radar-time-label">Radarzeit: -</span>
             <label class="radar-slider-wrap" for="radar-time-slider">
                 <span>Letzte Stunde</span>
-                <input id="radar-time-slider" class="radar-time-slider" type="range" min="0" max="12" value="12" step="1">
+                <input id="radar-time-slider" class="radar-time-slider" type="range" min="0" max="12" value="12" step="1" aria-label="Radar Zeit auswählen">
                 <span>Jetzt</span>
             </label>
             <span id="radar-loop-indicator" class="radar-loop-indicator" aria-live="polite"></span>
         </div>
         <div class="radar-footer">
             <span>DWD-Radaranimation: Niederschlagsrate der letzten Stunde in mm/h</span>
-            <img src="https://maps.dwd.de/geoserver/dwd/ows?service=WMS&version=1.3.0&request=GetLegendGraphic&format=image/png&width=20&height=20&layer=Niederschlagsradar" alt="DWD Niederschlagsradar Legende">
+            <img src="https://maps.dwd.de/geoserver/dwd/ows?service=WMS&version=1.3.0&request=GetLegendGraphic&format=image/png&width=20&height=20&layer=Niederschlagsradar" alt="DWD Niederschlagsradar Legende" loading="lazy">
         </div>
     </div>
 
@@ -112,37 +115,37 @@
     <!-- DIAGRAMME -->
     <h2>📉 Analyse & Verlaufsdiagramme</h2>
     <div class="btn-group" id="range-buttons">
-        <button class="btn active" onclick="changeRange('24h', this)">24 Stunden</button>
-        <button class="btn" onclick="changeRange('7d', this)">7 Tage</button>
-        <button class="btn" onclick="changeRange('30d', this)">30 Tage</button>
+        <button class="btn active" data-range="24h">24 Stunden</button>
+        <button class="btn" data-range="7d">7 Tage</button>
+        <button class="btn" data-range="30d">30 Tage</button>
     </div>
     <div class="chart-date-nav">
-        <button class="btn" onclick="shiftChartDate(-1)">Zurück</button>
+        <button class="btn" data-shift="-1">Zurück</button>
         <span id="chart-date-label" class="chart-date-label">-</span>
-        <button class="btn" onclick="resetChartDate()">Heute</button>
-        <button class="btn" id="chart-next-btn" onclick="shiftChartDate(1)">Vor</button>
+        <button class="btn" data-reset="true">Heute</button>
+        <button class="btn" id="chart-next-btn" data-shift="1">Vor</button>
     </div>
     <div class="btn-group preset-group" id="mode-buttons">
-        <button class="btn preset-btn" data-mode="klima" onclick="changeMode('klima', this)">Klima & Wind</button>
-        <button class="btn preset-btn" data-mode="feuchte" onclick="changeMode('feuchte', this)">Feuchtigkeits-Trend</button>
-        <button class="btn preset-btn" data-mode="solar" onclick="changeMode('solar', this)">☀️ Solar & Bewölkung</button>
+        <button class="btn preset-btn" data-mode="klima">Klima & Wind</button>
+        <button class="btn preset-btn" data-mode="feuchte">Feuchtigkeits-Trend</button>
+        <button class="btn preset-btn" data-mode="solar">☀️ Solar & Bewölkung</button>
     </div>
     <div class="btn-group series-group" id="series-buttons">
-        <button class="btn active" data-series="temp" onclick="toggleSeries('temp', this)">Temperatur außen</button>
-        <button class="btn" data-series="temp_in" onclick="toggleSeries('temp_in', this)">Temperatur innen</button>
-        <button class="btn" data-series="wind" onclick="toggleSeries('wind', this)">Windböen</button>
-        <button class="btn active" data-series="rain_rate" onclick="toggleSeries('rain_rate', this)">Niederschlag</button>
-        <button class="btn" data-series="traffic" onclick="toggleSeries('traffic', this)">Verkehr</button>
-        <button class="btn" data-series="dew_in" onclick="toggleSeries('dew_in', this)">Taupunkt innen</button>
-        <button class="btn" data-series="dew_out" onclick="toggleSeries('dew_out', this)">Taupunkt außen</button>
-        <button class="btn" data-series="hum_in" onclick="toggleSeries('hum_in', this)">Rel. Feuchte innen</button>
-        <button class="btn" data-series="solar_theo" onclick="toggleSeries('solar_theo', this)">Solar theoretisch</button>
-        <button class="btn active" data-series="solar_meas" onclick="toggleSeries('solar_meas', this)">Solar gemessen</button>
-        <button class="btn" data-series="cloudiness" onclick="toggleSeries('cloudiness', this)">Bewölkung</button>
+        <button class="btn active" data-series="temp">Temperatur außen</button>
+        <button class="btn" data-series="temp_in">Temperatur innen</button>
+        <button class="btn" data-series="wind">Windböen</button>
+        <button class="btn active" data-series="rain_rate">Niederschlag</button>
+        <button class="btn" data-series="traffic">Verkehr</button>
+        <button class="btn" data-series="dew_in">Taupunkt innen</button>
+        <button class="btn" data-series="dew_out">Taupunkt außen</button>
+        <button class="btn" data-series="hum_in">Rel. Feuchte innen</button>
+        <button class="btn" data-series="solar_theo">Solar theoretisch</button>
+        <button class="btn active" data-series="solar_meas">Solar gemessen</button>
+        <button class="btn" data-series="cloudiness">Bewölkung</button>
     </div>
     <div class="chart-container">
         <div class="chart-viewport">
-            <canvas id="mainChart"></canvas>
+            <canvas id="mainChart" role="img" aria-label="Hauptdiagramm: Temperatur, Niederschlag und weitere Zeitreihen"></canvas>
         </div>
     </div>
     <div class="wind-rose-card">
@@ -151,10 +154,10 @@
             <p id="wind-rose-summary">-</p>
         </div>
         <div class="wind-rose-chart">
-            <canvas id="windRoseChart"></canvas>
+            <canvas id="windRoseChart" role="img" aria-label="Windrose: Verteilung der Windrichtungen und Böen"></canvas>
         </div>
     </div>
-</div>
+</main>
 
 <script src="script.ts" type="module"></script>
 </body>
