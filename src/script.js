@@ -158,6 +158,8 @@ document.addEventListener("DOMContentLoaded", () => {
             type: "linear",
             display: true,
             position: "right",
+            min: 0,
+            suggestedMax: 70,
             grid: { drawOnChartArea: false },
             title: { display: true, text: "Wind km/h" },
         },
@@ -167,6 +169,7 @@ document.addEventListener("DOMContentLoaded", () => {
             position: "right",
             grid: { drawOnChartArea: false },
             min: 0,
+            suggestedMax: 20,
             title: { display: true, text: "Regen mm/h" },
         },
         percent: {
@@ -184,6 +187,7 @@ document.addEventListener("DOMContentLoaded", () => {
             position: "right",
             grid: { drawOnChartArea: false },
             min: 0,
+            suggestedMax: 1000,
             title: { display: true, text: "Solar W/m²" },
         },
     };
