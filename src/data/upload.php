@@ -37,14 +37,14 @@ try {
                 t1cn, t1bat, t1tem, t1hum, t1feels, t1chill, t1dew, 
                 t1ws, t1ws10mav, t1wgust, t1wdir, 
                 t1rainra, t1rainhr, t1raindy, t1rainwy, t1rainmth, t1rainyr, 
-                t1uvi, t1solrad, traffic_flow, apiver
+                t1uvi, t1solrad, traffic_flow, traffic_noise, apiver
             ) VALUES (
                 :zeitstempel, :station_id, 
                 :rbar, :abar, :intem, :inhum, 
                 :t1cn, :t1bat, :t1tem, :t1hum, :t1feels, :t1chill, :t1dew, 
                 :t1ws, :t1ws10mav, :t1wgust, :t1wdir, 
                 :t1rainra, :t1rainhr, :t1raindy, :t1rainwy, :t1rainmth, :t1rainyr, 
-                :t1uvi, :t1solrad, :traffic_flow, :apiver
+                :t1uvi, :t1solrad, :traffic_flow, :traffic_noise, :apiver
             )";
 
     $stmt = $pdo->prepare($sql);
@@ -76,7 +76,8 @@ try {
         ':t1rainyr'    => $incomingData['t1rainyr'] ?? null,
         ':t1uvi'       => $incomingData['t1uvi'] ?? null,
         ':t1solrad'    => $incomingData['t1solrad'] ?? null,
-        ':traffic_flow' => $traffic_flow,
+        ':traffic_flow' => $traffic_flow[0] ?? null,
+        ':traffic_noise' => $traffic_flow[1] ?? null,
         ':apiver'      => $incomingData['apiver'] ?? null
     ]);
 

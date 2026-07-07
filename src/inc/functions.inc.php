@@ -109,11 +109,12 @@ function getHamburgTrafficLoad()
 
     $total = $zaeh + $fliessend + $gestaut + $dicht;
     if ($total > 0) {
-        $trafficIndex = ($zaeh * 60. + $fliessend * 80. + $gestaut * 0. + $dicht * 100.) / $total;
-        return round($trafficIndex);
+        $noiseIndex = ($zaeh * 60. + $fliessend * 80. + $gestaut * 0. + $dicht * 100.) / $total;
+        $trafficIndex = ($zaeh * 60. + $fliessend * 0. + $gestaut * 100. + $dicht * 40.) / $total;
+        return [round($trafficIndex), round($noiseIndex)];
     }
 
-    return $defaultIndex;
+    return [null, null]; // Fallback, falls keine Daten verfügbar sind
 }
 
 function getTheoreticalInsolation($timestamp)
