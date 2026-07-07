@@ -1,4 +1,6 @@
 import Chart from "chart.js/auto";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
 
 document.addEventListener("DOMContentLoaded", () => {
     // --- PWA SERVICE WORKER REGISTRIERUNG ---
@@ -23,6 +25,7 @@ document.addEventListener("DOMContentLoaded", () => {
     let cachedChartData = null;
 
     const windSectorLabels = ["N", "NO", "O", "SO", "S", "SW", "W", "NW"];
+    const stationPosition = [53.4, 10.03];
 
     const chartPresets = {
         klima: ["temp", "temp_in", "wind", "rain_rate", "traffic"],
@@ -651,6 +654,45 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
+    function initRainRadar() {
+        const mapElement = document.getElementById("rainRadarMap");
+        if (!mapElement) return;
+
+        const map = L.map(mapElement, {
+            center: stationPosition,
+            zoom: 9,
+            scrollWheelZoom: false,
+        });
+
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+            attribution: "&copy; OpenStreetMap-Mitwirkende",
+            maxZoom: 18,
+        }).addTo(map);
+
+        L.tileLayer
+            .wms("https://maps.dwd.de/geoserver/dwd/ows", {
+                layers: "Niederschlagsradar",
+                format: "image/png",
+                transparent: true,
+                version: "1.3.0",
+                opacity: 0.72,
+                attribution: "&copy; Deutscher Wetterdienst",
+            })
+            .addTo(map);
+
+        L.circleMarker(stationPosition, {
+            radius: 6,
+            color: "#ffffff",
+            weight: 2,
+            fillColor: "#e74c3c",
+            fillOpacity: 1,
+        })
+            .addTo(map)
+            .bindPopup("Wetterstation");
+
+        setTimeout(() => map.invalidateSize(), 250);
+    }
+
     // --- BUTTON-FIX: EXKLUSIVE CONTAINER-IDS GEGEN DAS DAUER-BLAU ---
     window.changeRange = function (range, btn) {
         document
@@ -708,6 +750,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // Initialisierungs-Lauf
+    initRainRadar();
     updateLiveDashboard();
     loadChartData();
     setInterval(updateLiveDashboard, 60000); // Exakt alle 60 Sekunden auffrischen

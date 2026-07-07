@@ -187,6 +187,33 @@ h2 {
   margin-bottom: 0;
   gap: 15px;
 }
+.radar-section {
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+  margin-bottom: 30px;
+  overflow: hidden;
+}
+.radar-map {
+  height: 460px;
+  width: 100%;
+}
+.radar-footer {
+  align-items: center;
+  border-top: 1px solid #edf2f7;
+  color: #4a5568;
+  display: flex;
+  flex-wrap: wrap;
+  font-size: 0.9em;
+  gap: 12px;
+  justify-content: space-between;
+  padding: 10px 14px;
+}
+.radar-footer img {
+  max-height: 120px;
+  max-width: min(100%, 420px);
+  object-fit: contain;
+}
 .chart-container {
   background: #fff;
   padding: 20px;
@@ -320,6 +347,10 @@ h2 {
     height: 72vh;
     min-height: 440px;
     padding: 12px;
+  }
+
+  .radar-map {
+    height: 360px;
   }
 
   .chart-viewport {
