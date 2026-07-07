@@ -1,0 +1,20 @@
+# Prevent direct web access to include files
+<IfModule mod_authz_core.c>
+	Require all denied
+</IfModule>
+<IfModule !mod_authz_core.c>
+	Deny from all
+</IfModule>
+
+# Disable directory listing
+Options -Indexes
+
+# Block direct access to common source/include file extensions
+<FilesMatch "\.(inc|tpl|ini|phps?|sql)$">
+	<IfModule mod_authz_core.c>
+		Require all denied
+	</IfModule>
+	<IfModule !mod_authz_core.c>
+		Deny from all
+	</IfModule>
+</FilesMatch>

@@ -1,7 +1,7 @@
 <?php
 ini_set('display_errors', 0); // Schützt das JSON vor PHP-Warnungen
 error_reporting(E_ALL);
-require_once 'functions.inc.php';
+require_once './inc/functions.inc.php';
 header('Content-Type: application/json');
 
 $pdo = getDBConnection();

@@ -1,8 +1,8 @@
 <?php
 ini_set('display_errors', 1);
 error_reporting(E_ALL);
-require_once '../db.inc.php';
-require_once '../config.inc.php';
+require_once '../inc/db.inc.php';
+require_once '../inc/config.inc.php';
 
 $pdo = getDBConnection();
 
