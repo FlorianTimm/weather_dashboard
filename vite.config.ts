@@ -3,6 +3,20 @@ import { resolve } from 'path';
 import { viteStaticCopy } from 'vite-plugin-static-copy';
 import { VitePWA } from 'vite-plugin-pwa';
 
+const staticCopyTargets = [
+    {
+        src: '**/*.php',
+        dest: './'
+    },
+    {
+        src: '**/.htaccess',
+        dest: './',
+        globOptions: {
+            dot: true
+        }
+    }
+];
+
 export default defineConfig({
     root: 'src',
     server: {
@@ -19,20 +33,7 @@ export default defineConfig({
     },
     plugins: [
         viteStaticCopy({
-            targets: [
-                {
-                    src: '**/*.php',
-                    dest: './'
-                },
-                {
-                    src: '**/.htaccess',
-                    dest: './',
-                    globOptions: {
-                        dot: true
-                    }
-                }
-
-            ]
+            targets: staticCopyTargets as any
         }),
         VitePWA({
             strategies: 'generateSW', // Vite generiert die sw.js komplett selbst!

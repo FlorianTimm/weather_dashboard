@@ -1,16 +1,35 @@
 import Chart from "chart.js/auto";
-import { addDays, formatDateParam, formatTimeOnly } from "./format.js";
-import { createWindRose } from "./wind-rose.js";
+import type { Chart as ChartInstance, ChartDataset, TooltipItem } from "chart.js";
+import { addDays, formatDateParam, formatTimeOnly } from "./format";
+import type { AxisId, ChartDataKey, ChartPayload, RangeId, SeriesId } from "./types";
+import { WindRoseChart } from "./wind-rose";
 
-const defaultSeries = ["temp", "rain_rate", "dew_out", "solar_meas"];
+type PresetId = "klima" | "feuchte" | "solar";
+type LineDataset = ChartDataset<"line", Array<{ x: number; y: number | null }>> & {
+    dataKey: ChartDataKey;
+    yAxisID: AxisId;
+};
+type AppScaleOptions = {
+    type: "linear";
+    display?: boolean;
+    position?: "left" | "right";
+    grid?: { drawOnChartArea: boolean };
+    min?: number;
+    max?: number;
+    suggestedMax?: number;
+    title?: { display: boolean; text: string };
+    ticks?: Record<string, unknown>;
+};
 
-const chartPresets = {
+const defaultSeries: SeriesId[] = ["temp", "rain_rate", "dew_out", "solar_meas"];
+
+const chartPresets: Record<PresetId, SeriesId[]> = {
     klima: ["temp", "temp_in", "wind", "rain_rate", "traffic"],
     feuchte: ["dew_in", "dew_out", "hum_in"],
     solar: ["solar_theo", "solar_meas", "cloudiness"],
 };
 
-const chartSeries = {
+const chartSeries: Record<SeriesId, LineDataset> = {
     temp: createLineSeries("Temperatur Außen (°C)", "temp", "#e74c3c", "temperature", {
         backgroundColor: "rgba(231, 76, 60, 0.05)",
         fill: true,
@@ -52,7 +71,7 @@ const chartSeries = {
     }),
 };
 
-const chartScales = {
+const chartScales: Record<AxisId, AppScaleOptions> = {
     temperature: createScale("left", "Temperatur °C"),
     wind: createScale("right", "Wind km/h", { min: 0, suggestedMax: 70 }),
     rain: createScale("right", "Regen mm/h", { min: 0, suggestedMax: 20 }),
@@ -60,81 +79,84 @@ const chartScales = {
     solar: createScale("right", "Solar W/m²", { min: 0, suggestedMax: 1000 }),
 };
 
-export function createWeatherChart() {
-    let currentRange = "24h";
-    let selectedChartDate = new Date();
-    let activeSeries = new Set(defaultSeries);
-    let chartInstance = null;
-    let cachedChartData = null;
-    const renderWindRose = createWindRose();
+export class WeatherChart {
+    private currentRange: RangeId = "24h";
+    private selectedChartDate = new Date();
+    private activeSeries = new Set<SeriesId>(defaultSeries);
+    private chart: ChartInstance<"line", Array<{ x: number; y: number | null }>, string> | null = null;
+    private cachedChartData: ChartPayload | null = null;
+    private readonly windRose = new WindRoseChart();
 
-    async function loadChartData() {
+    async loadChartData(): Promise<void> {
         try {
             const response = await fetch(
-                `api.php?action=chart&range=${currentRange}&date=${formatDateParam(selectedChartDate)}`,
+                `api.php?action=chart&range=${this.currentRange}&date=${formatDateParam(this.selectedChartDate)}`,
             );
-            cachedChartData = await response.json();
-            syncChartDateControls();
-            renderChart();
-            renderWindRose(cachedChartData);
+            this.cachedChartData = (await response.json()) as ChartPayload;
+            this.syncChartDateControls();
+            this.renderChart();
+            this.windRose.render(this.cachedChartData);
         } catch (error) {
             console.error("Diagramm-Fehler", error);
         }
     }
 
-    function changeRange(range, btn) {
+    changeRange(range: RangeId, btn: HTMLElement): void {
         document.querySelectorAll("#range-buttons .btn").forEach((button) => button.classList.remove("active"));
         btn.classList.add("active");
-        currentRange = range;
-        loadChartData();
+        this.currentRange = range;
+        void this.loadChartData();
     }
 
-    function shiftChartDate(direction) {
-        selectedChartDate = addDays(selectedChartDate, direction * getRangeDays());
-        loadChartData();
+    shiftChartDate(direction: number): void {
+        this.selectedChartDate = addDays(this.selectedChartDate, direction * this.getRangeDays());
+        void this.loadChartData();
     }
 
-    function resetChartDate() {
-        selectedChartDate = new Date();
-        loadChartData();
+    resetChartDate(): void {
+        this.selectedChartDate = new Date();
+        void this.loadChartData();
     }
 
-    function changeMode(mode, btn) {
+    changeMode(mode: string, btn: HTMLElement): void {
+        if (!this.isPresetId(mode)) return;
+
         document.querySelectorAll("#mode-buttons .btn").forEach((button) => button.classList.remove("active"));
         btn.classList.add("active");
-        activeSeries = new Set(chartPresets[mode]);
-        syncSeriesButtons();
-        renderChart();
+        this.activeSeries = new Set(chartPresets[mode]);
+        this.syncSeriesButtons();
+        this.renderChart();
     }
 
-    function toggleSeries(seriesId, btn) {
-        if (activeSeries.has(seriesId) && activeSeries.size > 1) {
-            activeSeries.delete(seriesId);
+    toggleSeries(seriesId: SeriesId, btn: HTMLElement): void {
+        if (this.activeSeries.has(seriesId) && this.activeSeries.size > 1) {
+            this.activeSeries.delete(seriesId);
         } else {
-            activeSeries.add(seriesId);
+            this.activeSeries.add(seriesId);
         }
 
-        btn.classList.toggle("active", activeSeries.has(seriesId));
-        syncPresetButtons();
-        renderChart();
+        btn.classList.toggle("active", this.activeSeries.has(seriesId));
+        this.syncPresetButtons();
+        this.renderChart();
     }
 
-    function renderChart() {
-        if (!cachedChartData) return;
-        const ctx = document.getElementById("mainChart")?.getContext("2d");
+    private renderChart(): void {
+        if (!this.cachedChartData) return;
+        const canvas = document.getElementById("mainChart");
+        const ctx = canvas instanceof HTMLCanvasElement ? canvas.getContext("2d") : null;
         if (!ctx) return;
-        if (chartInstance) chartInstance.destroy();
 
+        this.chart?.destroy();
         const isMobile = window.matchMedia("(max-width: 700px)").matches;
-        const selectedSeries = Array.from(activeSeries);
+        const selectedSeries = Array.from(this.activeSeries);
         const datasets = selectedSeries.map((seriesId) => ({
             ...chartSeries[seriesId],
-            data: buildTimedData(chartSeries[seriesId].dataKey),
+            data: this.buildTimedData(chartSeries[seriesId].dataKey),
         }));
 
-        chartInstance = new Chart(ctx, {
+        this.chart = new Chart<"line", Array<{ x: number; y: number | null }>, string>(ctx, {
             type: "line",
-            data: { labels: cachedChartData.labels, datasets },
+            data: { labels: this.cachedChartData.labels, datasets },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
@@ -150,48 +172,53 @@ export function createWeatherChart() {
                     },
                     tooltip: {
                         callbacks: {
-                            title: (items) => (items.length ? formatTooltipTime(items[0].parsed.x) : ""),
+                            title: (items: TooltipItem<"line">[]) => {
+                                const xValue = items[0]?.parsed.x;
+                                return typeof xValue === "number" ? this.formatTooltipTime(xValue) : "";
+                            },
                         },
                     },
                 },
-                scales: buildScales(selectedSeries, isMobile),
+                scales: this.buildScales(selectedSeries, isMobile),
             },
         });
     }
 
-    function buildTimedData(dataKey) {
-        return cachedChartData[dataKey].map((value, index) => ({
-            x: cachedChartData.timestamps[index],
+    private buildTimedData(dataKey: ChartDataKey): Array<{ x: number; y: number | null }> {
+        if (!this.cachedChartData) return [];
+
+        return this.cachedChartData[dataKey].map((value, index) => ({
+            x: this.cachedChartData?.timestamps[index] ?? 0,
             y: value,
         }));
     }
 
-    function getRangeDays() {
-        if (currentRange === "7d") return 7;
-        if (currentRange === "30d") return 30;
+    private getRangeDays(): number {
+        if (this.currentRange === "7d") return 7;
+        if (this.currentRange === "30d") return 30;
         return 1;
     }
 
-    function syncChartDateControls() {
+    private syncChartDateControls(): void {
         const label = document.getElementById("chart-date-label");
-        const nextButton = document.getElementById("chart-next-btn");
+        const nextButton = document.getElementById("chart-next-btn") as HTMLButtonElement | null;
         const today = new Date();
         today.setHours(0, 0, 0, 0);
-        const selected = new Date(selectedChartDate);
+        const selected = new Date(this.selectedChartDate);
         selected.setHours(0, 0, 0, 0);
 
-        if (label) label.innerText = formatChartDateLabel(selected);
+        if (label) label.innerText = this.formatChartDateLabel(selected);
         if (nextButton) nextButton.disabled = selected >= today;
     }
 
-    function formatChartDateLabel(selected) {
+    private formatChartDateLabel(selected: Date): string {
         const formatter = new Intl.DateTimeFormat("de-DE", {
             day: "2-digit",
             month: "2-digit",
             year: "numeric",
         });
 
-        if (currentRange === "24h") {
+        if (this.currentRange === "24h") {
             const today = new Date();
             today.setHours(0, 0, 0, 0);
             const yesterday = addDays(today, -1);
@@ -201,19 +228,19 @@ export function createWeatherChart() {
             return formatter.format(selected);
         }
 
-        const startDate = addDays(selected, -(getRangeDays() - 1));
+        const startDate = addDays(selected, -(this.getRangeDays() - 1));
         return `${formatter.format(startDate)} bis ${formatter.format(selected)}`;
     }
 
-    function formatTimeTick(value) {
-        if (currentRange === "30d") {
+    private formatTimeTick(value: number | string): string {
+        if (this.currentRange === "30d") {
             return new Date(value).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" });
         }
 
         return formatTimeOnly(value);
     }
 
-    function formatTooltipTime(value) {
+    private formatTooltipTime(value: number): string {
         return new Date(value).toLocaleString("de-DE", {
             day: "2-digit",
             month: "2-digit",
@@ -222,8 +249,8 @@ export function createWeatherChart() {
         });
     }
 
-    function buildScales(selectedSeries, isMobile) {
-        return selectedSeries.reduce(
+    private buildScales(selectedSeries: SeriesId[], isMobile: boolean): Record<string, AppScaleOptions> {
+        return selectedSeries.reduce<Record<string, AppScaleOptions>>(
             (usedScales, seriesId) => {
                 const axisId = chartSeries[seriesId].yAxisID;
                 usedScales[axisId] = getResponsiveScale(chartScales[axisId], isMobile);
@@ -236,17 +263,40 @@ export function createWeatherChart() {
                         autoSkip: true,
                         maxRotation: isMobile ? 45 : 0,
                         maxTicksLimit: isMobile ? 8 : 12,
-                        callback: (value) => formatTimeTick(value),
+                        callback: (value: string | number) => this.formatTimeTick(value),
                     },
-                },
+                } as AppScaleOptions,
             },
         );
     }
 
-    return { loadChartData, changeRange, shiftChartDate, resetChartDate, changeMode, toggleSeries };
+    private syncSeriesButtons(): void {
+        document.querySelectorAll<HTMLButtonElement>("#series-buttons .btn").forEach((btn) => {
+            btn.classList.toggle("active", this.activeSeries.has(btn.dataset.series as SeriesId));
+        });
+    }
+
+    private syncPresetButtons(): void {
+        const selected = Array.from(this.activeSeries).sort().join("|");
+        document.querySelectorAll<HTMLButtonElement>("#mode-buttons .btn").forEach((btn) => {
+            const mode = btn.dataset.mode;
+            const preset = this.isPresetId(mode) ? chartPresets[mode].slice().sort().join("|") : "";
+            btn.classList.toggle("active", selected === preset);
+        });
+    }
+
+    private isPresetId(value: string | undefined): value is PresetId {
+        return value === "klima" || value === "feuchte" || value === "solar";
+    }
 }
 
-function createLineSeries(label, dataKey, borderColor, yAxisID, overrides = {}) {
+function createLineSeries(
+    label: string,
+    dataKey: ChartDataKey,
+    borderColor: string,
+    yAxisID: AxisId,
+    overrides: Partial<LineDataset> = {},
+): LineDataset {
     return {
         label,
         dataKey,
@@ -255,11 +305,12 @@ function createLineSeries(label, dataKey, borderColor, yAxisID, overrides = {}) 
         borderWidth: 2,
         pointRadius: 0,
         fill: false,
+        data: [],
         ...overrides,
     };
 }
 
-function createScale(position, title, overrides = {}) {
+function createScale(position: "left" | "right", title: string, overrides: Partial<AppScaleOptions> = {}): AppScaleOptions {
     return {
         type: "linear",
         display: true,
@@ -270,7 +321,7 @@ function createScale(position, title, overrides = {}) {
     };
 }
 
-function getResponsiveScale(scale, isMobile) {
+function getResponsiveScale(scale: AppScaleOptions, isMobile: boolean): AppScaleOptions {
     return {
         ...scale,
         title: scale.title ? { ...scale.title, display: scale.title.display && !isMobile } : scale.title,
