@@ -9,6 +9,10 @@ type LineDataset = ChartDataset<"line", Array<{ x: number; y: number | null }>> 
     dataKey: ChartDataKey;
     yAxisID: AxisId;
 };
+type UncertaintyBandDataset = ChartDataset<"line", Array<{ x: number; y: number | null }>> & {
+    yAxisID: AxisId;
+    isUncertainty: true;
+};
 type AppScaleOptions = {
     type: "linear";
     display?: boolean;
@@ -21,10 +25,10 @@ type AppScaleOptions = {
     ticks?: Record<string, unknown>;
 };
 
-const defaultSeries: SeriesId[] = ["temp", "rain_rate", "dew_out", "solar_meas"];
+const defaultSeries: SeriesId[] = ["temp", "rain_rate", "rbar", "solar_meas"];
 
 const chartPresets: Record<PresetId, SeriesId[]> = {
-    klima: ["temp", "rain_rate", "dew_out", "solar_meas"],
+    klima: ["temp", "rain_rate", "rbar", "dew_out", "solar_meas"],
     feuchte: ["dew_in", "dew_out", "hum_in"],
     solar: ["solar_theo", "solar_meas", "cloudiness"],
 };
@@ -32,10 +36,14 @@ const chartPresets: Record<PresetId, SeriesId[]> = {
 const chartSeries: Record<SeriesId, LineDataset> = {
     temp: createLineSeries("Temperatur Außen (°C)", "temp", "#e74c3c", "temperature", {
         backgroundColor: "rgba(231, 76, 60, 0.05)",
-        fill: true,
+        // fill: true,
         tension: 0.3,
     }),
     temp_in: createLineSeries("Temperatur Innen (°C)", "temp_in", "#d35400", "temperature", { tension: 0.3 }),
+    rbar: createLineSeries("Luftdruck rel. (hPa)", "rbar", "#6c5ce7", "pressure", {
+        borderWidth: 2,
+        tension: 0.2,
+    }),
     wind: createLineSeries("Windböen (km/h)", "wind", "#3498db", "wind", { tension: 0.3 }),
     rain_rate: createLineSeries("Regenrate (mm/h)", "rain_rate", "#003ada", "rain", {
         backgroundColor: "rgba(26, 64, 188, 0.32)",
@@ -68,12 +76,21 @@ const chartSeries: Record<SeriesId, LineDataset> = {
     solar_meas: createLineSeries("Gemessene Einstrahlung (W/m²)", "solar_meas", "#f1c40f", "solar", {
         backgroundColor: "rgba(241, 196, 15, 0.15)",
         borderWidth: 2.5,
-        fill: true,
+        //fill: true,
         tension: 0.2,
     }),
     cloudiness: createLineSeries("Berechneter Bewölkungsgrad (%)", "cloudiness", "#7f8c8d", "percent", {
         tension: 0.2,
     }),
+};
+
+const uncertaintyRanges: Partial<Record<SeriesId, { minKey: ChartDataKey; maxKey: ChartDataKey }>> = {
+    temp: { minKey: "temp_min", maxKey: "temp_max" },
+    temp_in: { minKey: "temp_in_min", maxKey: "temp_in_max" },
+    dew_out: { minKey: "dew_out_min", maxKey: "dew_out_max" },
+    hum_in: { minKey: "hum_in_min", maxKey: "hum_in_max" },
+    rbar: { minKey: "rbar_min", maxKey: "rbar_max" },
+    solar_meas: { minKey: "solar_meas_min", maxKey: "solar_meas_max" },
 };
 
 const chartScales: Record<AxisId, AppScaleOptions> = {
@@ -82,13 +99,15 @@ const chartScales: Record<AxisId, AppScaleOptions> = {
     rain: createScale("right", "Regen mm/h", { min: 0, suggestedMax: 20 }),
     percent: createScale("right", "Prozent %", { min: 0, max: 100 }),
     solar: createScale("right", "Solar W/m²", { min: 0, suggestedMax: 1000 }),
+    pressure: createScale("right", "Luftdruck hPa", { suggestedMax: 1040, min: 960 }),
 };
 
 export class WeatherChart {
     private currentRange: RangeId = "24h";
     private selectedChartDate = new Date();
     private activeSeries = new Set<SeriesId>(defaultSeries);
-    private chart: ChartInstance<"line", Array<{ x: number; y: number | null }>, string> | null = null;
+    private uncertaintyBandsEnabled = true;
+    private chart: ChartInstance | null = null;
     private cachedChartData: ChartPayload | null = null;
     private readonly windRose = new WindRoseChart();
 
@@ -101,6 +120,7 @@ export class WeatherChart {
             this.syncSeriesButtons();
             this.syncPresetButtons();
             this.syncChartDateControls();
+            this.syncUncertaintyToggleButton();
             this.renderChart();
             this.windRose.render(this.cachedChartData);
         } catch (error) {
@@ -147,6 +167,12 @@ export class WeatherChart {
         this.renderChart();
     }
 
+    toggleUncertaintyBands(btn?: HTMLElement): void {
+        this.uncertaintyBandsEnabled = !this.uncertaintyBandsEnabled;
+        this.syncUncertaintyToggleButton(btn);
+        this.renderChart();
+    }
+
     private renderChart(): void {
         if (!this.cachedChartData) return;
         const canvas = document.getElementById("mainChart");
@@ -156,12 +182,60 @@ export class WeatherChart {
         this.chart?.destroy();
         const isMobile = window.matchMedia("(max-width: 700px)").matches;
         const selectedSeries = Array.from(this.activeSeries);
-        const datasets = selectedSeries.map((seriesId) => ({
-            ...chartSeries[seriesId],
-            data: this.buildTimedData(chartSeries[seriesId].dataKey),
-        }));
+        const datasets: Array<LineDataset | UncertaintyBandDataset> = [];
 
-        this.chart = new Chart<"line", Array<{ x: number; y: number | null }>, string>(ctx, {
+        selectedSeries.forEach((seriesId) => {
+            const baseSeries = chartSeries[seriesId];
+            const range = uncertaintyRanges[seriesId];
+            if (!range || this.currentRange === "24h" || !this.uncertaintyBandsEnabled) {
+                datasets.push({
+                    ...baseSeries,
+                    data: this.buildTimedData(baseSeries.dataKey),
+                });
+                return;
+            }
+
+            const minData = this.buildTimedData(range.minKey);
+            const maxData = this.buildTimedData(range.maxKey);
+
+            datasets.push({
+                type: "line",
+                label: `${baseSeries.label} Min`,
+                yAxisID: baseSeries.yAxisID,
+                data: minData,
+                borderColor: "rgba(0, 0, 0, 0)",
+                backgroundColor: "rgba(0, 0, 0, 0)",
+                borderWidth: 0,
+                pointRadius: 0,
+                fill: false,
+                tension: baseSeries.tension ?? 0.2,
+                order: 80,
+                isUncertainty: true,
+            });
+
+            datasets.push({
+                type: "line",
+                label: `${baseSeries.label} Max`,
+                yAxisID: baseSeries.yAxisID,
+                data: maxData,
+                borderColor: "rgba(0, 0, 0, 0)",
+                backgroundColor: hexToRgba(String(baseSeries.borderColor), 0.18),
+                borderWidth: 0,
+                pointRadius: 0,
+                fill: "-1",
+                tension: baseSeries.tension ?? 0.2,
+                order: 81,
+                isUncertainty: true,
+            });
+
+            datasets.push({
+                ...baseSeries,
+                data: this.buildTimedData(baseSeries.dataKey),
+                order: 10,
+            });
+        });
+
+        this.chart = new Chart(ctx, {
             type: "line",
             data: { labels: this.cachedChartData.labels, datasets },
             options: {
@@ -175,6 +249,10 @@ export class WeatherChart {
                         labels: {
                             boxWidth: isMobile ? 16 : 40,
                             font: { size: isMobile ? 11 : 12 },
+                            filter: (legendItem) => {
+                                const ds = datasets[legendItem.datasetIndex ?? -1] as UncertaintyBandDataset | LineDataset | undefined;
+                                return !ds || !("isUncertainty" in ds);
+                            },
                         },
                     },
                     tooltip: {
@@ -182,6 +260,13 @@ export class WeatherChart {
                             title: (items: TooltipItem<"line">[]) => {
                                 const xValue = items[0]?.parsed.x;
                                 return typeof xValue === "number" ? this.formatTooltipTime(xValue) : "";
+                            },
+                            label: (item) => {
+                                const ds = datasets[item.datasetIndex] as UncertaintyBandDataset | LineDataset;
+                                if ("isUncertainty" in ds) {
+                                    return undefined;
+                                }
+                                return undefined;
                             },
                         },
                     },
@@ -304,6 +389,16 @@ export class WeatherChart {
         });
     }
 
+    private syncUncertaintyToggleButton(clickedBtn?: HTMLElement): void {
+        const btn = (clickedBtn as HTMLButtonElement | undefined)
+            ?? document.getElementById("uncertainty-toggle") as HTMLButtonElement | null;
+        if (!btn) return;
+
+        btn.classList.toggle("active", this.uncertaintyBandsEnabled);
+        btn.setAttribute("aria-pressed", String(this.uncertaintyBandsEnabled));
+        btn.textContent = this.uncertaintyBandsEnabled ? "Min/Max-Bänder: an" : "Min/Max-Bänder: aus";
+    }
+
     private isPresetId(value: string | undefined): value is PresetId {
         return value === "klima" || value === "feuchte" || value === "solar";
     }
@@ -350,4 +445,25 @@ function getResponsiveScale(scale: AppScaleOptions, isMobile: boolean): AppScale
             maxTicksLimit: isMobile ? 6 : 10,
         },
     };
+}
+
+function hexToRgba(hex: string, alpha: number): string {
+    const normalized = hex.replace("#", "").trim();
+    if (![3, 6].includes(normalized.length)) {
+        return `rgba(127, 140, 141, ${alpha})`;
+    }
+
+    const full = normalized.length === 3
+        ? normalized.split("").map((char) => `${char}${char}`).join("")
+        : normalized;
+
+    const r = Number.parseInt(full.slice(0, 2), 16);
+    const g = Number.parseInt(full.slice(2, 4), 16);
+    const b = Number.parseInt(full.slice(4, 6), 16);
+
+    if ([r, g, b].some((v) => Number.isNaN(v))) {
+        return `rgba(127, 140, 141, ${alpha})`;
+    }
+
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }

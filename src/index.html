@@ -130,9 +130,13 @@
         <button class="btn preset-btn" data-mode="feuchte" aria-pressed="false">Feuchtigkeits-Trend</button>
         <button class="btn preset-btn" data-mode="solar" aria-pressed="false">☀️ Solar & Bewölkung</button>
     </div>
+    <div class="btn-group" id="uncertainty-controls">
+        <button class="btn active" id="uncertainty-toggle" aria-pressed="true">Min/Max-Bänder: an</button>
+    </div>
     <div class="btn-group series-group" id="series-buttons">
         <button class="btn active" data-series="temp" aria-pressed="true">Temperatur außen</button>
         <button class="btn" data-series="temp_in" aria-pressed="false">Temperatur innen</button>
+        <button class="btn active" data-series="rbar" aria-pressed="true">Luftdruck</button>
         <button class="btn" data-series="wind" aria-pressed="false">Windböen</button>
         <button class="btn active" data-series="rain_rate" aria-pressed="true">Niederschlag</button>
         <button class="btn" data-series="traffic_flow" aria-pressed="false">Verkehrsfluss</button>

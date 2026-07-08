@@ -26,10 +26,10 @@ document.addEventListener("DOMContentLoaded", () => {
     new RainRadar().init();
     new LiveDashboard().init();
     void weatherChart.loadChartData();
-    registerUIHandlers();
+    registerUIHandlers(weatherChart);
 });
 
-function registerUIHandlers(): void {
+function registerUIHandlers(weatherChart: WeatherChart): void {
     // Range buttons
     document.querySelectorAll("#range-buttons [data-range]").forEach((el) => {
         const btn = el as HTMLElement;
@@ -75,6 +75,13 @@ function registerUIHandlers(): void {
             if (series && window.toggleSeries) window.toggleSeries(series, btn);
         });
     });
+
+    const uncertaintyBtn = document.getElementById("uncertainty-toggle") as HTMLElement | null;
+    if (uncertaintyBtn) {
+        uncertaintyBtn.addEventListener("click", () => {
+            weatherChart.toggleUncertaintyBands(uncertaintyBtn);
+        });
+    }
 }
 
 function registerServiceWorker(): void {

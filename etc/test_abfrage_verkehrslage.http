@@ -1,0 +1,28 @@
+POST https://geodienste.hamburg.de/wfs_hh_verkehrslage
+
+<?xml version="1.0" encoding="UTF-8"?>
+<wfs:GetFeature outputFormat="text/csv" xmlns:ows="http://www.opengis.net/ows"
+    xmlns:gml="http://www.opengis.net/gml"
+    xmlns:ogc="http://www.opengis.net/ogc"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:wfs="http://www.opengis.net/wfs"
+    xsi:schemaLocation="http://www.opengis.net/wfs http://schemas.opengis.net/wfs/1.1.0/wfs.xsd">
+    <wfs:Query typeName="de.hh.up:verkehrslage">
+        <ogc:Filter>
+            <ogc:And>
+                <ogc:PropertyIsEqualTo>
+                    <ogc:PropertyName>de.hh.up:strassenklasse</ogc:PropertyName>
+                    <ogc:Literal>Hauptverkehrsstraße</ogc:Literal>
+                </ogc:PropertyIsEqualTo>
+
+                <ogc:BBOX>
+                    <ogc:PropertyName>de.hh.up:geom</ogc:PropertyName>
+                    <gml:Envelope srsName="EPSG:4326">
+                        <gml:lowerCorner>10.00631 53.38783</gml:lowerCorner>
+                        <gml:upperCorner>10.03944 53.41526</gml:upperCorner>
+                    </gml:Envelope>
+                </ogc:BBOX>
+            </ogc:And>
+        </ogc:Filter>
+    </wfs:Query>
+</wfs:GetFeature>
