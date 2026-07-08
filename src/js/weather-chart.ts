@@ -13,6 +13,11 @@ type UncertaintyBandDataset = ChartDataset<"line", Array<{ x: number; y: number 
     yAxisID: AxisId;
     isUncertainty: true;
 };
+type ComparisonDataset = ChartDataset<"line", Array<{ x: number; y: number | null }>> & {
+    yAxisID: AxisId;
+    isComparison: true;
+};
+type ComparisonMode = "none" | "bands" | "previous";
 type AppScaleOptions = {
     type: "linear";
     display?: boolean;
@@ -106,21 +111,28 @@ export class WeatherChart {
     private currentRange: RangeId = "24h";
     private selectedChartDate = new Date();
     private activeSeries = new Set<SeriesId>(defaultSeries);
-    private uncertaintyBandsEnabled = true;
+    private comparisonMode: ComparisonMode = "none";
     private chart: ChartInstance | null = null;
     private cachedChartData: ChartPayload | null = null;
+    private cachedPreviousChartData: ChartPayload | null = null;
     private readonly windRose = new WindRoseChart();
 
     async loadChartData(): Promise<void> {
         try {
-            const response = await fetch(
-                `api.php?action=chart&range=${this.currentRange}&date=${formatDateParam(this.selectedChartDate)}`,
-            );
-            this.cachedChartData = (await response.json()) as ChartPayload;
+            const previousDate = addDays(this.selectedChartDate, -this.getRangeDays());
+            const [currentResponse, previousResponse] = await Promise.all([
+                fetch(`api.php?action=chart&range=${this.currentRange}&date=${formatDateParam(this.selectedChartDate)}`),
+                fetch(`api.php?action=chart&range=${this.currentRange}&date=${formatDateParam(previousDate)}`),
+            ]);
+
+            this.cachedChartData = (await currentResponse.json()) as ChartPayload;
+            this.cachedPreviousChartData = previousResponse.ok
+                ? ((await previousResponse.json()) as ChartPayload)
+                : null;
             this.syncSeriesButtons();
             this.syncPresetButtons();
             this.syncChartDateControls();
-            this.syncUncertaintyToggleButton();
+            this.syncPreviousPeriodToggleButton();
             this.renderChart();
             this.windRose.render(this.cachedChartData);
         } catch (error) {
@@ -130,6 +142,10 @@ export class WeatherChart {
 
     changeRange(range: RangeId, btn: HTMLElement): void {
         this.currentRange = range;
+        if (this.currentRange === "24h" && this.comparisonMode === "bands") {
+            this.comparisonMode = "previous";
+            this.syncPreviousPeriodToggleButton();
+        }
         this.syncRangeButtons(btn);
         void this.loadChartData();
     }
@@ -167,14 +183,15 @@ export class WeatherChart {
         this.renderChart();
     }
 
-    toggleUncertaintyBands(btn?: HTMLElement): void {
-        this.uncertaintyBandsEnabled = !this.uncertaintyBandsEnabled;
-        this.syncUncertaintyToggleButton(btn);
+    togglePreviousPeriod(btn?: HTMLElement): void {
+        this.comparisonMode = this.nextComparisonMode(this.comparisonMode);
+        this.syncPreviousPeriodToggleButton(btn);
         this.renderChart();
     }
 
     private renderChart(): void {
-        if (!this.cachedChartData) return;
+        const currentData = this.cachedChartData;
+        if (!currentData) return;
         const canvas = document.getElementById("mainChart");
         const ctx = canvas instanceof HTMLCanvasElement ? canvas.getContext("2d") : null;
         if (!ctx) return;
@@ -182,62 +199,85 @@ export class WeatherChart {
         this.chart?.destroy();
         const isMobile = window.matchMedia("(max-width: 700px)").matches;
         const selectedSeries = Array.from(this.activeSeries);
-        const datasets: Array<LineDataset | UncertaintyBandDataset> = [];
+        const datasets: Array<LineDataset | UncertaintyBandDataset | ComparisonDataset> = [];
+        const shiftMs = this.getRangeDays() * 24 * 60 * 60 * 1000;
 
         selectedSeries.forEach((seriesId) => {
             const baseSeries = chartSeries[seriesId];
-            const range = uncertaintyRanges[seriesId];
-            if (!range || this.currentRange === "24h" || !this.uncertaintyBandsEnabled) {
+            const baseFill = this.comparisonMode === "none" && (seriesId === "temp" || seriesId === "solar_meas");
+            datasets.push({
+                ...baseSeries,
+                data: this.buildTimedDataFromPayload(currentData, baseSeries.dataKey),
+                fill: baseFill,
+                order: 10,
+            });
+
+            if (this.comparisonMode === "bands") {
+                const range = uncertaintyRanges[seriesId];
+                if (!range || this.currentRange === "24h") {
+                    return;
+                }
+
+                const minData = this.buildTimedDataFromPayload(currentData, range.minKey);
+                const maxData = this.buildTimedDataFromPayload(currentData, range.maxKey);
+
                 datasets.push({
-                    ...baseSeries,
-                    data: this.buildTimedData(baseSeries.dataKey),
+                    type: "line",
+                    label: `${baseSeries.label} Min`,
+                    yAxisID: baseSeries.yAxisID,
+                    data: minData,
+                    borderColor: "rgba(0, 0, 0, 0)",
+                    backgroundColor: "rgba(0, 0, 0, 0)",
+                    borderWidth: 0,
+                    pointRadius: 0,
+                    fill: false,
+                    tension: baseSeries.tension ?? 0.2,
+                    order: 80,
+                    isUncertainty: true,
                 });
+
+                datasets.push({
+                    type: "line",
+                    label: `${baseSeries.label} Max`,
+                    yAxisID: baseSeries.yAxisID,
+                    data: maxData,
+                    borderColor: "rgba(0, 0, 0, 0)",
+                    backgroundColor: hexToRgba(String(baseSeries.borderColor), 0.18),
+                    borderWidth: 0,
+                    pointRadius: 0,
+                    fill: "-1",
+                    tension: baseSeries.tension ?? 0.2,
+                    order: 81,
+                    isUncertainty: true,
+                });
+
                 return;
             }
 
-            const minData = this.buildTimedData(range.minKey);
-            const maxData = this.buildTimedData(range.maxKey);
+            if (this.comparisonMode !== "previous" || !this.cachedPreviousChartData) {
+                return;
+            }
 
             datasets.push({
                 type: "line",
-                label: `${baseSeries.label} Min`,
+                label: `${baseSeries.label} (Vorperiode)`,
                 yAxisID: baseSeries.yAxisID,
-                data: minData,
-                borderColor: "rgba(0, 0, 0, 0)",
+                data: this.buildTimedDataFromPayload(this.cachedPreviousChartData, baseSeries.dataKey, shiftMs),
+                borderColor: hexToRgba(String(baseSeries.borderColor), 0.55),
                 backgroundColor: "rgba(0, 0, 0, 0)",
-                borderWidth: 0,
+                borderWidth: 1.8,
+                borderDash: [7, 4],
                 pointRadius: 0,
                 fill: false,
                 tension: baseSeries.tension ?? 0.2,
-                order: 80,
-                isUncertainty: true,
-            });
-
-            datasets.push({
-                type: "line",
-                label: `${baseSeries.label} Max`,
-                yAxisID: baseSeries.yAxisID,
-                data: maxData,
-                borderColor: "rgba(0, 0, 0, 0)",
-                backgroundColor: hexToRgba(String(baseSeries.borderColor), 0.18),
-                borderWidth: 0,
-                pointRadius: 0,
-                fill: "-1",
-                tension: baseSeries.tension ?? 0.2,
-                order: 81,
-                isUncertainty: true,
-            });
-
-            datasets.push({
-                ...baseSeries,
-                data: this.buildTimedData(baseSeries.dataKey),
-                order: 10,
+                order: 30,
+                isComparison: true,
             });
         });
 
         this.chart = new Chart(ctx, {
             type: "line",
-            data: { labels: this.cachedChartData.labels, datasets },
+            data: { labels: currentData.labels, datasets },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
@@ -250,7 +290,11 @@ export class WeatherChart {
                             boxWidth: isMobile ? 16 : 40,
                             font: { size: isMobile ? 11 : 12 },
                             filter: (legendItem) => {
-                                const ds = datasets[legendItem.datasetIndex ?? -1] as UncertaintyBandDataset | LineDataset | undefined;
+                                const ds = datasets[legendItem.datasetIndex ?? -1] as
+                                    | LineDataset
+                                    | UncertaintyBandDataset
+                                    | ComparisonDataset
+                                    | undefined;
                                 return !ds || !("isUncertainty" in ds);
                             },
                         },
@@ -261,13 +305,6 @@ export class WeatherChart {
                                 const xValue = items[0]?.parsed.x;
                                 return typeof xValue === "number" ? this.formatTooltipTime(xValue) : "";
                             },
-                            label: (item) => {
-                                const ds = datasets[item.datasetIndex] as UncertaintyBandDataset | LineDataset;
-                                if ("isUncertainty" in ds) {
-                                    return undefined;
-                                }
-                                return undefined;
-                            },
                         },
                     },
                 },
@@ -275,12 +312,13 @@ export class WeatherChart {
             },
         });
     }
-
-    private buildTimedData(dataKey: ChartDataKey): Array<{ x: number; y: number | null }> {
-        if (!this.cachedChartData) return [];
-
-        return this.cachedChartData[dataKey].map((value, index) => ({
-            x: this.cachedChartData?.timestamps[index] ?? 0,
+    private buildTimedDataFromPayload(
+        payload: ChartPayload,
+        dataKey: ChartDataKey,
+        shiftMs = 0,
+    ): Array<{ x: number; y: number | null }> {
+        return payload[dataKey].map((value, index) => ({
+            x: (payload.timestamps[index] ?? 0) + shiftMs,
             y: value,
         }));
     }
@@ -389,14 +427,36 @@ export class WeatherChart {
         });
     }
 
-    private syncUncertaintyToggleButton(clickedBtn?: HTMLElement): void {
+    private syncPreviousPeriodToggleButton(clickedBtn?: HTMLElement): void {
         const btn = (clickedBtn as HTMLButtonElement | undefined)
-            ?? document.getElementById("uncertainty-toggle") as HTMLButtonElement | null;
+            ?? document.getElementById("comparison-toggle") as HTMLButtonElement | null;
         if (!btn) return;
 
-        btn.classList.toggle("active", this.uncertaintyBandsEnabled);
-        btn.setAttribute("aria-pressed", String(this.uncertaintyBandsEnabled));
-        btn.textContent = this.uncertaintyBandsEnabled ? "Min/Max-Bänder: an" : "Min/Max-Bänder: aus";
+        const isActive = this.comparisonMode !== "none";
+        btn.classList.toggle("active", isActive);
+        btn.setAttribute("aria-pressed", String(isActive));
+
+        if (this.comparisonMode === "bands") {
+            btn.textContent = "Vergleich: Min/Max-Baender";
+            return;
+        }
+
+        if (this.comparisonMode === "previous") {
+            btn.textContent = "Vergleich: Vorzeitraum";
+            return;
+        }
+
+        btn.textContent = "Vergleich: aus";
+    }
+
+    private nextComparisonMode(currentMode: ComparisonMode): ComparisonMode {
+        if (this.currentRange === "24h") {
+            return currentMode === "none" ? "previous" : "none";
+        }
+
+        if (currentMode === "none") return "bands";
+        if (currentMode === "bands") return "previous";
+        return "none";
     }
 
     private isPresetId(value: string | undefined): value is PresetId {

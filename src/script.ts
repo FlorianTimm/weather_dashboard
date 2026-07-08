@@ -76,10 +76,10 @@ function registerUIHandlers(weatherChart: WeatherChart): void {
         });
     });
 
-    const uncertaintyBtn = document.getElementById("uncertainty-toggle") as HTMLElement | null;
-    if (uncertaintyBtn) {
-        uncertaintyBtn.addEventListener("click", () => {
-            weatherChart.toggleUncertaintyBands(uncertaintyBtn);
+    const comparisonBtn = document.getElementById("comparison-toggle") as HTMLElement | null;
+    if (comparisonBtn) {
+        comparisonBtn.addEventListener("click", () => {
+            weatherChart.togglePreviousPeriod(comparisonBtn);
         });
     }
 }
